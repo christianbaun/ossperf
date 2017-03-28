@@ -7,7 +7,7 @@
 # url:          https://github.com/christianbaun/s3perf
 # license:      GPLv3
 # date:         March 28th 2017
-# version:      1.01
+# version:      1.02
 # bash_version: 4.3.30(1)-release
 # requires:     md5sum (tested with version 8.23),
 #               bc (tested with version 1.06.95),
@@ -32,7 +32,7 @@ storage services
 Arguments:
 -h : show this message on screen
 -n : number of files to be created
--s : size of the files to be created in bytes
+-s : size of the files to be created in bytes (max 10485760 = 10 MB)
 -k : keep the local files and the directory afterwards (do not clean up)
 "
 exit 0
@@ -62,10 +62,11 @@ DIRECTORY="testfiles"
 # Name for the bucket to store the files
 BUCKET="s3perf-testbucket"
 
-if ([[ "$NUM_FILES" -eq 0 ]] || [[ "$SIZE_FILES" -eq 0 ]]) ; then
+if ([[ "$NUM_FILES" -eq 0 ]] || [[ "$SIZE_FILES" -eq 0 ]] || [[ "$SIZE_FILES" -gt 10485760 ]]) ; then
    usage
    exit 1
 fi
+
 
 # Check if the directory already exists
 # This is not a part of the benchmark!
