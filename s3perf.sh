@@ -9,7 +9,8 @@
 # date:         March 28th 2017
 # version:      1.01
 # bash_version: 4.3.30(1)-release
-# requires:     md5sum (tested with version 8.23), 
+# requires:     md5sum (tested with version 8.23),
+#               bc (tested with version 1.06.95),
 #               s3cmd (tested with versions 1.5.0 and 1.6.1)
 # notes:        s3cmd need to be configured first via s3cmd --configure
 # example:      ./s3perf.sh -n 5 -s 1048576 # 5 files of 1 MB size each
