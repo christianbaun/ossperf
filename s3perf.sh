@@ -6,12 +6,13 @@
 # author:       Dr. Christian Baun, Rosa Maria Spanou
 # url:          https://github.com/christianbaun/s3perf
 # license:      GPLv3
-# date:         March 28th 2017
-# version:      1.02
+# date:         March 30th 2017
+# version:      1.1
 # bash_version: 4.3.30(1)-release
 # requires:     md5sum (tested with version 8.23),
 #               bc (tested with version 1.06.95),
-#               s3cmd (tested with versions 1.5.0 and 1.6.1)
+#               s3cmd (tested with versions 1.5.0 and 1.6.1),
+#               parallel (tested with version 20130922)
 # notes:        s3cmd need to be configured first via s3cmd --configure
 # example:      ./s3perf.sh -n 5 -s 1048576 # 5 files of 1 MB size each
 # ----------------------------------------------------------------------------
@@ -34,6 +35,7 @@ Arguments:
 -n : number of files to be created
 -s : size of the files to be created in bytes (max 10485760 = 10 MB)
 -k : keep the local files and the directory afterwards (do not clean up)
+-p : upload and download the files in parallel
 "
 exit 0
 }
@@ -42,15 +44,18 @@ SCRIPT=${0##*/}   # script name
 NUM_FILES=
 SIZE_FILES=
 NOT_CLEAN_UP=0
+PARALLEL=0
+LIST_OF_FILES=
 
 
-while getopts "hn:s:k" Arg ; do
+while getopts "hn:s:kp" Arg ; do
   case $Arg in
     h) usage ;;
     n) NUM_FILES=$OPTARG ;;
     s) SIZE_FILES=$OPTARG ;;
     # If the flag has been set => $NOT_CLEAN_UP gets value 1
     k) NOT_CLEAN_UP=1 ;;
+    p) PARALLEL=1 ;;
     \?) echo "Invalid option: $OPTARG" >&2
         exit 1
         ;;
@@ -125,11 +130,21 @@ TIME_CREATE_BUCKET=`echo "scale=3 ; (${TIME_CREATE_BUCKET_END} - ${TIME_CREATE_B
 # Start of the 2nd time measurement
 TIME_OBJECTS_UPLOAD_START=`date +%s.%N`
 
-# Upload files
-if s3cmd put $DIRECTORY/*.txt s3://$BUCKET ; then
-  echo "Files have been uploaded."
+# If the "parallel" flag has been set, upload in parallel with GNU parallel
+if [ "$PARALLEL" -eq 1 ] ; then
+  # Upload files in parallel
+  if find $DIRECTORY/*.txt | parallel s3cmd put {} s3://$BUCKET ; then
+    echo "Files have been uploaded."
+  else
+    echo "Unable to upload the files." && exit 1
+  fi
 else
-  echo "Unable to upload the files." && exit 1
+  # Upload files sequentially
+  if s3cmd put $DIRECTORY/*.txt s3://$BUCKET ; then
+    echo "Files have been uploaded."
+  else
+    echo "Unable to upload the files." && exit 1
+  fi
 fi
 
 # End of the 2nd time measurement
@@ -142,23 +157,26 @@ TIME_OBJECTS_UPLOAD_END=`date +%s.%N`
 TIME_OBJECTS_UPLOAD=`echo "scale=3 ; (${TIME_OBJECTS_UPLOAD_END} - ${TIME_OBJECTS_UPLOAD_START})/1" | bc | sed 's/^\./0./'`
 
 
-# Remove the local files 
-# This is not a part of the benchmark!
-if rm $DIRECTORY/*.txt && sync ; then
-  echo "Local files have been erased prior download"
-else
-  echo "Unable to erase the local files prior download." && exit 1
-fi
-
-
 # Start of the 3rd time measurement
 TIME_OBJECTS_DOWNLOAD_START=`date +%s.%N`
 
-# Download files
-if s3cmd get s3://$BUCKET/*.txt $DIRECTORY/ ; then
-  echo "Files have been downloaded."
+echo ${LIST_OF_FILES}
+
+# If the "parallel" flag has been set, download in parallel with GNU parallel
+if [ "$PARALLEL" -eq 1 ] ; then
+  # Download files in parallel
+  if find ${DIRECTORY}/*.txt -type f -printf "%f\n" | parallel s3cmd get --force s3://$BUCKET/{} $DIRECTORY/ ; then
+    echo "Files have been downloaded."
+  else
+    echo "Unable to download the files." && exit 1
+  fi
 else
-  echo "Unable to download the files." && exit 1
+  # Download files sequentially
+  if s3cmd get --force s3://$BUCKET/*.txt $DIRECTORY/ ; then
+    echo "Files have been downloaded."
+  else
+    echo "Unable to download the files." && exit 1
+  fi
 fi
 
 # End of the 3rd time measurement

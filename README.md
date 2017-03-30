@@ -4,7 +4,7 @@ s3perf is a lightweight command line tool for analyzing the performance and data
 
 ## Synopsis
 
-`s3perf.sh -n files -s size [-k]`
+`s3perf.sh -n files -s size [-k] [-p]`
 
 ## Requirements
 
@@ -13,6 +13,7 @@ These software packages must be installed on all worker nodes:
 - bash 4.3.30
 - s3cmd 1.6.1
 - bc 1.06.95
+- parallel 20130922
 
 ## Example
 
