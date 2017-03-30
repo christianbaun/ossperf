@@ -40,6 +40,8 @@ Visit the s3perf web page for more information and the latest revision.
 
 [https://github.com/christianbaun/s3perf](https://github.com/christianbaun/s3perf)
 
+Some further information provides the [Wiki](https://github.com/christianbaun/s3perf/wiki)
+
 ## License
 
 [GPLv3](https://www.gnu.org/licenses/gpl-3.0.en.html) or later.
