@@ -17,9 +17,9 @@ These software packages must be installed on all worker nodes:
 
 ## Example
 
-This command will create five files of size 1 MB each and use them to test the performance and data integrity of the S3 service
+This command will create five files of size 1 MB each and use them to test the performance and data integrity of the S3 service. The uploads and the downloads will be carried out in parallel.
 
-`./s3perf.sh -n 5 -s 1048576`
+`./s3perf.sh -n 5 -s 1048576 -p`
 
 ## Interesting Sources about the performance evaluation of S3-compatible services
 
