@@ -2,6 +2,10 @@
 
 s3perf is a lightweight command line tool for analyzing the performance and data integrity of S3-compatible storage services. The tool creates a user defined number of files with random content and of a specified size inside a local directory. The tool creates a bucket, uploads and downloads the files and afterwards removes the bucket. The time, required to carry out theses S3-related tasks is measured and printed out on command line. 
 
+Storage services tested with this tool are so far:
+- [Amazon Simple Storage Service (S3)](https://aws.amazon.com/s3/)
+- [Google Cloud Storage (GCS)](https://cloud.google.com/storage/)
+
 ## Synopsis
 
 `s3perf.sh -n files -s size [-k] [-p]`

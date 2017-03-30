@@ -7,7 +7,7 @@
 # url:          https://github.com/christianbaun/s3perf
 # license:      GPLv3
 # date:         March 30th 2017
-# version:      1.1
+# version:      1.2
 # bash_version: 4.3.30(1)-release
 # requires:     md5sum (tested with version 8.23),
 #               bc (tested with version 1.06.95),
@@ -33,7 +33,7 @@ storage services
 Arguments:
 -h : show this message on screen
 -n : number of files to be created
--s : size of the files to be created in bytes (max 10485760 = 10 MB)
+-s : size of the files to be created in bytes (max 16777216 = 16 MB)
 -k : keep the local files and the directory afterwards (do not clean up)
 -p : upload and download the files in parallel
 "
@@ -67,7 +67,7 @@ DIRECTORY="testfiles"
 # Name for the bucket to store the files
 BUCKET="s3perf-testbucket"
 
-if ([[ "$NUM_FILES" -eq 0 ]] || [[ "$SIZE_FILES" -eq 0 ]] || [[ "$SIZE_FILES" -gt 10485760 ]]) ; then
+if ([[ "$NUM_FILES" -eq 0 ]] || [[ "$SIZE_FILES" -eq 0 ]] || [[ "$SIZE_FILES" -gt 16777216 ]]) ; then
    usage
    exit 1
 fi
@@ -156,6 +156,9 @@ TIME_OBJECTS_UPLOAD_END=`date +%s.%N`
 # The sed command ensures that results < 1 have a leading 0 before the "."
 TIME_OBJECTS_UPLOAD=`echo "scale=3 ; (${TIME_OBJECTS_UPLOAD_END} - ${TIME_OBJECTS_UPLOAD_START})/1" | bc | sed 's/^\./0./'`
 
+
+# Wait a moment. Sometimes, the services cannot provide fresh uploaded files this quick
+sleep 1
 
 # Start of the 3rd time measurement
 TIME_OBJECTS_DOWNLOAD_START=`date +%s.%N`
