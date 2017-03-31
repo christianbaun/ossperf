@@ -6,8 +6,8 @@
 # author:       Dr. Christian Baun, Rosa Maria Spanou
 # url:          https://github.com/christianbaun/s3perf
 # license:      GPLv3
-# date:         March 31th 2017
-# version:      1.4
+# date:         April 1th 2017
+# version:      1.41
 # bash_version: 4.3.30(1)-release
 # requires:     md5sum (tested with version 8.23),
 #               bc (tested with version 1.06.95),
@@ -79,7 +79,9 @@ fi
 # Path of the directory for the files
 DIRECTORY="testfiles"
 # Name for the bucket to store the files
-BUCKET="s3perf-testbucket"
+# ATTENTION! When using Google Cloud Storage or Amazon S3, it is ok when the bucket name is written in lower case.
+# But when using Nimbus Cumulus, the bucket name needs to be in upper case.
+BUCKET="S3PERF-TESTBUCKET"
 
 if ([[ "$NUM_FILES" -eq 0 ]] || [[ "$SIZE_FILES" -eq 0 ]] || [[ "$SIZE_FILES" -gt 16777216 ]]) ; then
    usage
