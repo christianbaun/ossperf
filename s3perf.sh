@@ -7,7 +7,7 @@
 # url:          https://github.com/christianbaun/s3perf
 # license:      GPLv3
 # date:         March 31th 2017
-# version:      1.3
+# version:      1.4
 # bash_version: 4.3.30(1)-release
 # requires:     md5sum (tested with version 8.23),
 #               bc (tested with version 1.06.95),
@@ -20,8 +20,15 @@
 # Check if the required command line tools are available
 command -v s3cmd >/dev/null 2>&1 || { echo >&2 "s3perf requires the command line tool s3cmd. Please install it."; exit 1; }
 command -v bc >/dev/null 2>&1 || { echo >&2 "s3perf requires the command line tool bc. Please install it."; exit 1; }
-command -v parallel >/dev/null 2>&1 || { echo >&2 "s3perf requires the command line tool parallel. Please install it."; exit 1; }
 command -v md5sum >/dev/null 2>&1 || { echo >&2 "s3perf requires the command line tool md5sum. Please install it."; exit 1; }
+command -v ping >/dev/null 2>&1 || { echo >&2 "s3perf requires the command line tool ping Please install it."; exit 1; }
+
+# Check if we have a working network connection by sending a ping to 8.8.8.8
+if ping -q -c 1 -W 1 8.8.8.8 >/dev/null ; then
+  echo "This computer has a working internet connection."
+else
+  echo "This computer has no working internet connection. Please check your network settings." && exit 1
+fi
 
 function usage
 {
@@ -61,6 +68,13 @@ while getopts "hn:s:kp" Arg ; do
         ;;
   esac
 done
+
+
+# Only if the user wants to execute the upload and dowload of the files in parallel...
+if [ "$PARALLEL" -eq 1 ] ; then
+  # ... the script needs to check, if the command line tool GNU parallel is installed
+  command -v parallel >/dev/null 2>&1 || { echo >&2 "s3perf requires the command line tool parallel. Please install it."; exit 1; }
+fi
 
 # Path of the directory for the files
 DIRECTORY="testfiles"
