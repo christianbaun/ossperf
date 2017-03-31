@@ -6,8 +6,8 @@
 # author:       Dr. Christian Baun, Rosa Maria Spanou
 # url:          https://github.com/christianbaun/s3perf
 # license:      GPLv3
-# date:         March 30th 2017
-# version:      1.2
+# date:         March 31th 2017
+# version:      1.3
 # bash_version: 4.3.30(1)-release
 # requires:     md5sum (tested with version 8.23),
 #               bc (tested with version 1.06.95),
@@ -17,11 +17,11 @@
 # example:      ./s3perf.sh -n 5 -s 1048576 # 5 files of 1 MB size each
 # ----------------------------------------------------------------------------
 
-# Check if s3cmd is available
-s3cmd --version > /dev/null 2>&1
-if [ $? -ne 0 ]; then
-  echo "s3perf requires the command line tool s3cmd!"; exit 1
-fi
+# Check if the required command line tools are available
+command -v s3cmd >/dev/null 2>&1 || { echo >&2 "s3perf requires the command line tool s3cmd. Please install it."; exit 1; }
+command -v bc >/dev/null 2>&1 || { echo >&2 "s3perf requires the command line tool bc. Please install it."; exit 1; }
+command -v parallel >/dev/null 2>&1 || { echo >&2 "s3perf requires the command line tool parallel. Please install it."; exit 1; }
+command -v md5sum >/dev/null 2>&1 || { echo >&2 "s3perf requires the command line tool md5sum. Please install it."; exit 1; }
 
 function usage
 {
