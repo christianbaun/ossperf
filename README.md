@@ -26,7 +26,9 @@ This command will create five files of size 1 MB each and use them to test the p
 
 `./s3perf.sh -n 5 -s 1048576 -p`
 
-## Interesting Sources about the performance evaluation of S3-compatible services
+## Related Work
+
+Some interesting papers and software projects focusing the performance evaluation of S3-compatible services.
 
 - [An Evaluation of Amazon's Grid Computing Services: EC2, S3 and SQS](https://dash.harvard.edu/bitstream/handle/1/24829568/tr-08-07.pdf). *Simson Garfinkel*. 2007. *In this paper, the throughput which S3 can deliver with objects of different sizes, is evaluated over several days from several locations by using a self-written tool. Sadly, this tool was never released.*
 - [Amazon S3 for Science Grids: a Viable Solution?](http://dl.acm.org/citation.cfm?id=1383526) *Mayur Palankar, Adriana Iamnitchi, Matei Ripeanu, Simson Garfinkel*. 2008. Proceedings of the 2008 international workshop on Data-aware distributed computing (DADC 2008). Pages 55-64.
