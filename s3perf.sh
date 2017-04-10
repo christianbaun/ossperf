@@ -6,8 +6,8 @@
 # author:       Dr. Christian Baun, Rosa Maria Spanou
 # url:          https://github.com/christianbaun/s3perf
 # license:      GPLv3
-# date:         April 1th 2017
-# version:      1.41
+# date:         April 11th 2017
+# version:      1.51
 # bash_version: 4.3.30(1)-release
 # requires:     md5sum (tested with version 8.23),
 #               bc (tested with version 1.06.95),
@@ -23,16 +23,9 @@ command -v bc >/dev/null 2>&1 || { echo >&2 "s3perf requires the command line to
 command -v md5sum >/dev/null 2>&1 || { echo >&2 "s3perf requires the command line tool md5sum. Please install it."; exit 1; }
 command -v ping >/dev/null 2>&1 || { echo >&2 "s3perf requires the command line tool ping Please install it."; exit 1; }
 
-# Check if we have a working network connection by sending a ping to 8.8.8.8
-if ping -q -c 1 -W 1 8.8.8.8 >/dev/null ; then
-  echo "This computer has a working internet connection."
-else
-  echo "This computer has no working internet connection. Please check your network settings." && exit 1
-fi
-
 function usage
 {
-echo "$SCRIPT -n files -s size [-k]
+echo "$SCRIPT -n files -s size [-u] [-k] [-p]
 
 This script analyzes the performance and data integrity of S3-compatible
 storage services 
@@ -41,6 +34,7 @@ Arguments:
 -h : show this message on screen
 -n : number of files to be created
 -s : size of the files to be created in bytes (max 16777216 = 16 MB)
+-u : use upper-case letters for the bucket name (this is required for Nimbus Cumulus)
 -k : keep the local files and the directory afterwards (do not clean up)
 -p : upload and download the files in parallel
 "
@@ -50,17 +44,19 @@ exit 0
 SCRIPT=${0##*/}   # script name
 NUM_FILES=
 SIZE_FILES=
+UPPERCASE=0
 NOT_CLEAN_UP=0
 PARALLEL=0
 LIST_OF_FILES=
 
 
-while getopts "hn:s:kp" Arg ; do
+while getopts "hn:s:ukp" Arg ; do
   case $Arg in
     h) usage ;;
     n) NUM_FILES=$OPTARG ;;
     s) SIZE_FILES=$OPTARG ;;
     # If the flag has been set => $NOT_CLEAN_UP gets value 1
+    u) UPPERCASE=1 ;;
     k) NOT_CLEAN_UP=1 ;;
     p) PARALLEL=1 ;;
     \?) echo "Invalid option: $OPTARG" >&2
@@ -81,13 +77,34 @@ DIRECTORY="testfiles"
 # Name for the bucket to store the files
 # ATTENTION! When using Google Cloud Storage or Amazon S3, it is ok when the bucket name is written in lower case.
 # But when using Nimbus Cumulus, the bucket name needs to be in upper case.
-BUCKET="S3PERF-TESTBUCKET"
+# Minio does not accept bucket names with upper-case letters.
+# 
+# A helpful source about this topic is: http://docs.rightscale.com/faq/clouds/aws/What_are_valid_S3_bucket_names.html
+# "In order to conform with DNS requirements, we recommend following these additional guidelines when creating buckets:"
+# "Bucket names should not contain upper-case letters"
+# "Bucket names should not contain underscores (_)"
+# "Bucket names should not end with a dash"
+# "Bucket names should be between 3 and 63 characters long"
+# "Bucket names cannot contain dashes next to periods (e.g., my-.bucket.com and my.-bucket are invalid)"
+# "Bucket names cannot contain periods"
+
+if [[ "UPPERCASE" -eq 1 ]] ; then
+   BUCKET="S3PERF-TESTBUCKET"
+else
+   BUCKET="s3perf-testbucket"
+fi
 
 if ([[ "$NUM_FILES" -eq 0 ]] || [[ "$SIZE_FILES" -eq 0 ]] || [[ "$SIZE_FILES" -gt 16777216 ]]) ; then
    usage
    exit 1
 fi
 
+# Check if we have a working network connection by sending a ping to 8.8.8.8
+if ping -q -c 1 -W 1 8.8.8.8 >/dev/null ; then
+  echo "This computer has a working internet connection."
+else
+  echo "This computer has no working internet connection. Please check your network settings." && exit 1
+fi
 
 # Check if the directory already exists
 # This is not a part of the benchmark!
