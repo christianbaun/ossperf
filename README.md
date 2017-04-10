@@ -9,7 +9,7 @@ Storage services tested with this tool are so far:
 
 ## Synopsis
 
-`s3perf.sh -n files -s size [-k] [-p]`
+`s3perf.sh -n files -s size [-u] [-k] [-p]`
 
 ## Requirements
 
