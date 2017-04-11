@@ -6,6 +6,7 @@ Storage services tested with this tool are so far:
 - [Amazon Simple Storage Service (S3)](https://aws.amazon.com/s3/)
 - [Google Cloud Storage (GCS)](https://cloud.google.com/storage/)
 - [Nimbus Cumulus](https://github.com/nimbusproject/nimbus)
+- [Minio](https://github.com/minio/minio)
 
 ## Synopsis
 
