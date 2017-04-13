@@ -7,6 +7,7 @@ Storage services tested with this tool are so far:
 - [Google Cloud Storage (GCS)](https://cloud.google.com/storage/)
 - [Nimbus Cumulus](https://github.com/nimbusproject/nimbus)
 - [Minio](https://github.com/minio/minio)
+- [S3ninja](https://github.com/scireum/s3ninja/)
 
 ## Synopsis
 
