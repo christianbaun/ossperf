@@ -8,6 +8,7 @@ Storage services tested with this tool are so far:
 - [Nimbus Cumulus](https://github.com/nimbusproject/nimbus)
 - [Minio](https://github.com/minio/minio)
 - [S3ninja](https://github.com/scireum/s3ninja/)
+- [S3rver](https://github.com/jamhall/s3rver/)
 
 ## Synopsis
 
