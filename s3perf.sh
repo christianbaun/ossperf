@@ -6,8 +6,8 @@
 # author:       Dr. Christian Baun, Rosa Maria Spanou
 # url:          https://github.com/christianbaun/s3perf
 # license:      GPLv3
-# date:         April 13th 2017
-# version:      1.52
+# date:         April 25th 2017
+# version:      1.53
 # bash_version: 4.3.30(1)-release
 # requires:     md5sum (tested with version 8.23),
 #               bc (tested with version 1.06.95),
@@ -77,7 +77,7 @@ DIRECTORY="testfiles"
 # Name for the bucket to store the files
 # ATTENTION! When using Google Cloud Storage or Amazon S3, it is ok when the bucket name is written in lower case.
 # But when using Nimbus Cumulus and S3ninja, the bucket name needs to be in upper case.
-# Minio does not accept bucket names with upper-case letters.
+# Minio and S3rver do not accept bucket names with upper-case letters.
 # 
 # A helpful source about this topic is: http://docs.rightscale.com/faq/clouds/aws/What_are_valid_S3_bucket_names.html
 # "In order to conform with DNS requirements, we recommend following these additional guidelines when creating buckets:"
