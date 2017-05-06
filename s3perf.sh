@@ -77,7 +77,7 @@ DIRECTORY="testfiles"
 # Name for the bucket to store the files
 # ATTENTION! When using Google Cloud Storage, Amazon S3 or FakeS3, it is ok when the bucket name is written in lower case.
 # But when using Nimbus Cumulus and S3ninja, the bucket name needs to be in upper case.
-# Minio, S3rver and Scality S3 do not accept bucket names with upper-case letters.
+# Minio, Riak CS, S3rver and Scality S3 do not accept bucket names with upper-case letters.
 # 
 # A helpful source about this topic is: http://docs.rightscale.com/faq/clouds/aws/What_are_valid_S3_bucket_names.html
 # "In order to conform with DNS requirements, we recommend following these additional guidelines when creating buckets:"
