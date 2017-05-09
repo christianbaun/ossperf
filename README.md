@@ -1,6 +1,6 @@
 # s3perf
 
-s3perf is a lightweight command line tool for analyzing the performance and data integrity of S3-compatible storage services. The tool creates a user defined number of files with random content and of a specified size inside a local directory. The tool creates a bucket, uploads and downloads the files and afterwards removes the bucket. The time, required to carry out theses S3-related tasks is measured and printed out on command line. 
+s3perf is a lightweight command line tool for analyzing the performance and data integrity of storage services which implement the S3 API or the alternatively the Swift API. The tool creates a user defined number of files with random content and of a specified size inside a local directory. The tool creates a bucket, uploads and downloads the files and afterwards removes the bucket. The time, required to carry out theses S3/Swift-related tasks is measured and printed out on command line. 
 
 Storage services tested with this tool are so far:
 - [Amazon Simple Storage Service (S3)](https://aws.amazon.com/s3/)
@@ -12,12 +12,21 @@ Storage services tested with this tool are so far:
 - [Fake S3](https://github.com/jubos/fake-s3)
 - [Scality S3](https://github.com/scality/S3)
 - [Riak CS](https://github.com/basho/riak_cs)
+- [OpenStack Swift](https://github.com/openstack/swift)
 
-Up to now, it was not possible to test s3perf with [OpenStack Swift](https://github.com/openstack/swift) because the TempAuth authentication system of Swift is not compatible with the s3cmd tool, which is used by s3perf. Extending s3perf in a way that it can interact with Swift via curl or the Swift Client is one of the future steps.
 
 ## Synopsis
 
-`s3perf.sh -n files -s size [-u] [-k] [-p]`
+    s3perf.sh -n files -s size [-u] [a] [-k] [-p]
+
+    Arguments:
+    -h : show this message on screen
+    -n : number of files to be created
+    -s : size of the files to be created in bytes (max 16777216 = 16 MB)
+    -u : use upper-case letters for the bucket name (this is required for Nimbus Cumulus and S3ninja)
+    -a : use the Swift API and not the S3 API (this requires the python client for the Swift API and the environment variables ST_AUTH, ST_USER and ST_KEY)
+    -k : keep the local files and the directory afterwards (do not clean up)
+    -p : upload and download the files in parallel
 
 ## Requirements
 
@@ -30,7 +39,7 @@ These software packages must be installed on all worker nodes:
 
 ## Example
 
-This command will create five files of size 1 MB each and use them to test the performance and data integrity of the S3 service. The uploads and the downloads will be carried out in parallel.
+This command will create five files of size 1 MB each and use them to test the performance and data integrity of the storage service. The uploads and the downloads will be carried out in parallel.
 
 `./s3perf.sh -n 5 -s 1048576 -p`
 
