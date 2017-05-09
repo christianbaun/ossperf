@@ -13,7 +13,7 @@ Storage services tested with this tool are so far:
 - [Scality S3](https://github.com/scality/S3)
 - [Riak CS](https://github.com/basho/riak_cs)
 
-Up to now, it was not possible to test s3perf with [Swift](https://github.com/openstack/swift) because the TempAuth authentication system of Swift is not compatible with the s3cmd tool, which is used by s3perf. Extending s3perf in a way that it can interact with Swift via curl or the Swift Client is one of the future steps.
+Up to now, it was not possible to test s3perf with [OpenStack Swift](https://github.com/openstack/swift) because the TempAuth authentication system of Swift is not compatible with the s3cmd tool, which is used by s3perf. Extending s3perf in a way that it can interact with Swift via curl or the Swift Client is one of the future steps.
 
 ## Synopsis
 

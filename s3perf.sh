@@ -6,13 +6,14 @@
 # author:       Dr. Christian Baun, Rosa Maria Spanou
 # url:          https://github.com/christianbaun/s3perf
 # license:      GPLv3
-# date:         April 25th 2017
-# version:      1.53
+# date:         May 9th 2017
+# version:      1.6
 # bash_version: 4.3.30(1)-release
 # requires:     md5sum (tested with version 8.23),
 #               bc (tested with version 1.06.95),
 #               s3cmd (tested with versions 1.5.0 and 1.6.1),
 #               parallel (tested with version 20130922)
+#               swift (tested with version 20130922)
 # notes:        s3cmd need to be configured first via s3cmd --configure
 # example:      ./s3perf.sh -n 5 -s 1048576 # 5 files of 1 MB size each
 # ----------------------------------------------------------------------------
@@ -25,7 +26,7 @@ command -v ping >/dev/null 2>&1 || { echo >&2 "s3perf requires the command line 
 
 function usage
 {
-echo "$SCRIPT -n files -s size [-u] [-k] [-p]
+echo "$SCRIPT -n files -s size [-u] [a] [-k] [-p]
 
 This script analyzes the performance and data integrity of S3-compatible
 storage services 
@@ -35,6 +36,7 @@ Arguments:
 -n : number of files to be created
 -s : size of the files to be created in bytes (max 16777216 = 16 MB)
 -u : use upper-case letters for the bucket name (this is required for Nimbus Cumulus and S3ninja)
+-a : use the Swift API and not the S3 API (this requires the python client for the Swift API and the environment variables ST_AUTH, ST_USER and ST_KEY)
 -k : keep the local files and the directory afterwards (do not clean up)
 -p : upload and download the files in parallel
 "
@@ -45,18 +47,20 @@ SCRIPT=${0##*/}   # script name
 NUM_FILES=
 SIZE_FILES=
 UPPERCASE=0
+SWIFT_API=0
 NOT_CLEAN_UP=0
 PARALLEL=0
 LIST_OF_FILES=
 
 
-while getopts "hn:s:ukp" Arg ; do
+while getopts "hn:s:uakp" Arg ; do
   case $Arg in
     h) usage ;;
     n) NUM_FILES=$OPTARG ;;
     s) SIZE_FILES=$OPTARG ;;
     # If the flag has been set => $NOT_CLEAN_UP gets value 1
     u) UPPERCASE=1 ;;
+    a) SWIFT_API=1 ;;
     k) NOT_CLEAN_UP=1 ;;
     p) PARALLEL=1 ;;
     \?) echo "Invalid option: $OPTARG" >&2
@@ -72,10 +76,31 @@ if [ "$PARALLEL" -eq 1 ] ; then
   command -v parallel >/dev/null 2>&1 || { echo >&2 "s3perf requires the command line tool parallel. Please install it."; exit 1; }
 fi
 
+# Only if the user wants to use the Swift API and not the S3 API
+if [ "$SWIFT_API" -eq 1 ] ; then
+  # ... the script needs to check, if the command line tool swift installed
+  command -v swift >/dev/null 2>&1 || { echo >&2 "If the Swift API shall be used, the command line tool swift need to be installed first. Please install it."; exit 1;}
+  
+  # ... the script needs to check, if the environment variable ST_AUTH is set
+  if [ -z "$ST_AUTH" ] ; then
+    echo "If the Swift API shall be used, the environment variable ST_AUTH must contain the Auth URL of the storage service. Please set it with export ST_AUTH=http://<IP_or_URL>/auth/v1.0" && exit 1
+  fi
+  
+  # ... the script needs to check, if the environment variable ST_USER is set
+  if [ -z "$ST_USER" ] ; then
+    echo "If the Swift API shall be used, the environment variable ST_USER must contain the Username of the storage service. Please set it with export ST_USER=<username>" && exit 1
+  fi
+  
+  # ... the script needs to check, if the environment variable ST_KEY is set
+  if [ -z "$ST_KEY" ] ; then
+    echo "If the Swift API shall be used, the environment variable ST_KEY must contain the Password of the storage service. Please set it with export ST_KEY=<password>" && exit 1
+  fi
+fi
+
 # Path of the directory for the files
 DIRECTORY="testfiles"
 # Name for the bucket to store the files
-# ATTENTION! When using Google Cloud Storage, Amazon S3 or FakeS3, it is ok when the bucket name is written in lower case.
+# ATTENTION! When using Google Cloud Storage, Amazon S3, Swift or FakeS3, it is ok when the bucket name is written in lower case.
 # But when using Nimbus Cumulus and S3ninja, the bucket name needs to be in upper case.
 # Minio, Riak CS, S3rver and Scality S3 do not accept bucket names with upper-case letters.
 # 
@@ -143,11 +168,25 @@ fi
 # Start of the 1st time measurement
 TIME_CREATE_BUCKET_START=`date +%s.%N`
 
-# Create bucket
-if s3cmd mb s3://$BUCKET ; then
-  echo "Bucket ${BUCKET} has been created."
+# -------------------------------
+# | Create a bucket / container |
+# -------------------------------
+# In the Swift ecosystem, the buckets are called conainers. 
+
+# use the Swift API
+if [ "$SWIFT_API" -eq 1 ] ; then
+  if swift post $BUCKET ; then
+    echo "Bucket ${BUCKET} has been created."
+  else
+    echo "Unable to create the bucket (container) ${BUCKET}." && exit 1
+  fi
 else
-  echo "Unable to create the bucket ${BUCKET}." && exit 1
+  # use the S3 API
+  if s3cmd mb s3://$BUCKET ; then
+    echo "Bucket ${BUCKET} has been created."
+  else
+    echo "Unable to create the bucket ${BUCKET}." && exit 1
+  fi
 fi
 
 # End of the 1st time measurement
@@ -163,21 +202,49 @@ TIME_CREATE_BUCKET=`echo "scale=3 ; (${TIME_CREATE_BUCKET_END} - ${TIME_CREATE_B
 # Start of the 2nd time measurement
 TIME_OBJECTS_UPLOAD_START=`date +%s.%N`
 
+
+# ------------------------------
+# | Upload the Files (Objects) |
+# ------------------------------
+
 # If the "parallel" flag has been set, upload in parallel with GNU parallel
 if [ "$PARALLEL" -eq 1 ] ; then
-  # Upload files in parallel
-  if find $DIRECTORY/*.txt | parallel s3cmd put {} s3://$BUCKET ; then
-    echo "Files have been uploaded."
+  # use the Swift API
+  if [ "$SWIFT_API" -eq 1 ] ; then
+    # Upload files in parallel
+    if find $DIRECTORY/*.txt | parallel swift post $BUCKET {} ; then
+      echo "Files have been uploaded."
+    else
+      echo "Unable to upload the files." && exit 1
+    fi
   else
-    echo "Unable to upload the files." && exit 1
+  # use the S3 API
+    # Upload files in parallel
+    if find $DIRECTORY/*.txt | parallel s3cmd put {} s3://$BUCKET ; then
+      echo "Files have been uploaded."
+    else
+      echo "Unable to upload the files." && exit 1
+    fi
   fi
 else
-  # Upload files sequentially
-  if s3cmd put $DIRECTORY/*.txt s3://$BUCKET ; then
-    echo "Files have been uploaded."
+# If the "parallel" flag has NOT been set, upload the files sequentially
+  # use the Swift API
+  if [ "$SWIFT_API" -eq 1 ] ; then
+    # Upload files sequentially
+    if swift upload $BUCKET $DIRECTORY/*.txt ; then
+      echo "Files have been uploaded."
+    else
+      echo "Unable to upload the files." && exit 1
+    fi
   else
-    echo "Unable to upload the files." && exit 1
-  fi
+  # use the S3 API
+    # Upload files sequentially
+    if s3cmd put $DIRECTORY/*.txt s3://$BUCKET ; then
+      echo "Files have been uploaded."
+    else
+      echo "Unable to upload the files." && exit 1
+    fi
+  fi    
 fi
 
 # End of the 2nd time measurement
@@ -198,20 +265,46 @@ TIME_OBJECTS_DOWNLOAD_START=`date +%s.%N`
 
 echo ${LIST_OF_FILES}
 
+# --------------------------------
+# | Download the Files (Objects) |
+# --------------------------------
+
 # If the "parallel" flag has been set, download in parallel with GNU parallel
 if [ "$PARALLEL" -eq 1 ] ; then
-  # Download files in parallel
-  if find ${DIRECTORY}/*.txt -type f -printf "%f\n" | parallel s3cmd get --force s3://$BUCKET/{} $DIRECTORY/ ; then
-    echo "Files have been downloaded."
+  # use the Swift API
+  if [ "$SWIFT_API" -eq 1 ] ; then
+    # Upload files in parallel
+    if find $DIRECTORY/*.txt | parallel swift download $BUCKET {} ; then
+      echo "Files have been uploaded."
+    else
+      echo "Unable to upload the files." && exit 1
+    fi
   else
-    echo "Unable to download the files." && exit 1
+  # use the S3 API
+    # Download files in parallel
+    if find ${DIRECTORY}/*.txt -type f -printf "%f\n" | parallel s3cmd get --force s3://$BUCKET/{} $DIRECTORY/ ; then
+      echo "Files have been downloaded."
+    else
+      echo "Unable to download the files." && exit 1
+    fi
   fi
 else
-  # Download files sequentially
-  if s3cmd get --force s3://$BUCKET/*.txt $DIRECTORY/ ; then
-    echo "Files have been downloaded."
+  # use the Swift API
+  if [ "$SWIFT_API" -eq 1 ] ; then
+    # Download files sequentially
+    if swift download --output-dir $DIRECTORY $BUCKET/*.txt  ; then
+      echo "Files have been downloaded."
+    else
+      echo "Unable to download the files." && exit 1
+    fi
   else
-    echo "Unable to download the files." && exit 1
+  # use the S3 API
+    # Download files sequentially
+    if s3cmd get --force s3://$BUCKET/*.txt $DIRECTORY/ ; then
+      echo "Files have been downloaded."
+    else
+      echo "Unable to download the files." && exit 1
+    fi
   fi
 fi
 
@@ -237,12 +330,29 @@ fi
 # Start of the 4th time measurement
 TIME_ERASE_OBJECTS_START=`date +%s.%N`
 
-# Erase files (objects) inside the bucket
-if s3cmd del s3://$BUCKET/* ; then
-  echo "Files inside the bucket ${BUCKET} have been erased"
+# -----------------------------
+# | Erase the Files (Objects) |
+# -----------------------------
+
+
+# use the Swift API
+if [ "$SWIFT_API" -eq 1 ] ; then
+  # Erase files (objects) inside the bucket
+  if find $DIRECTORY/*.txt | swift delete $BUCKET {} ; then
+    echo "Files inside the bucket ${BUCKET} have been erased"
+  else
+    echo "Unable to erase the files inside the bucket ${BUCKET}." && exit 1
+  fi
 else
-  echo "Unable to erase the files inside the bucket ${BUCKET}." && exit 1
+  # use the S3 API
+  # Erase files (objects) inside the bucket
+  if s3cmd del s3://$BUCKET/* ; then
+    echo "Files inside the bucket ${BUCKET} have been erased"
+  else
+    echo "Unable to erase the files inside the bucket ${BUCKET}." && exit 1
+  fi
 fi
+
 
 # End of the 4th time measurement
 TIME_ERASE_OBJECTS_END=`date +%s.%N`
@@ -257,12 +367,28 @@ TIME_ERASE_OBJECTS=`echo "scale=3 ; (${TIME_ERASE_OBJECTS_END} - ${TIME_ERASE_OB
 # Start of the 5th time measurement
 TIME_ERASE_BUCKET_START=`date +%s.%N`
 
-# Erase bucket
-if s3cmd rb s3://$BUCKET ; then
-  echo "Bucket ${BUCKET} has been erased."
-else
-  echo "Unable to erase the bucket ${BUCKET}." && exit 1
+
+# ----------------------------
+# | Erase bucket / container |
+# ----------------------------
+# In the Swift ecosystem, the buckets are called conainers. 
+
+# use the Swift API
+if [ "$SWIFT_API" -eq 1 ] ; then
+  if swift delete $BUCKET ; then
+    echo "Bucket (Container) ${BUCKET} has been erased."
+  else
+    echo "Unable to erase the bucket (container) ${BUCKET}." && exit 1
+  fi
+elif 
+  # use the S3 API
+  if s3cmd rb s3://$BUCKET ; then
+    echo "Bucket ${BUCKET} has been erased."
+  else
+    echo "Unable to erase the bucket ${BUCKET}." && exit 1
+  fi
 fi
+
 
 # End of the 5th time measurement
 TIME_ERASE_BUCKET_END=`date +%s.%N`
