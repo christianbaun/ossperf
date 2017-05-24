@@ -6,8 +6,8 @@
 # author:       Dr. Christian Baun, Rosa Maria Spanou
 # url:          https://github.com/christianbaun/s3perf
 # license:      GPLv3
-# date:         May 9th 2017
-# version:      1.6
+# date:         May 24th 2017
+# version:      1.7
 # bash_version: 4.3.30(1)-release
 # requires:     md5sum (tested with version 8.23),
 #               bc (tested with version 1.06.95),
@@ -79,21 +79,21 @@ fi
 # Only if the user wants to use the Swift API and not the S3 API
 if [ "$SWIFT_API" -eq 1 ] ; then
   # ... the script needs to check, if the command line tool swift installed
-  command -v swift >/dev/null 2>&1 || { echo >&2 "If the Swift API shall be used, the command line tool swift need to be installed first. Please install it."; exit 1;}
+  command -v swift >/dev/null 2>&1 || { echo -e >&2 "If the Swift API shall be used, the command line tool swift need to be installed first. Please install it. Probably these commands will install the swift client:\n\cd \$HOME; git clone https://github.com/openstack/python-swiftclient.git\n\cd \$HOME/python-swiftclient; sudo python setup.py develop; cd -."; exit 1; }
   
   # ... the script needs to check, if the environment variable ST_AUTH is set
   if [ -z "$ST_AUTH" ] ; then
-    echo "If the Swift API shall be used, the environment variable ST_AUTH must contain the Auth URL of the storage service. Please set it with export ST_AUTH=http://<IP_or_URL>/auth/v1.0" && exit 1
+    echo -e "If the Swift API shall be used, the environment variable ST_AUTH must contain the Auth URL of the storage service. Please set it with this command:\nexport ST_AUTH=http://<IP_or_URL>/auth/v1.0" && exit 1
   fi
   
   # ... the script needs to check, if the environment variable ST_USER is set
   if [ -z "$ST_USER" ] ; then
-    echo "If the Swift API shall be used, the environment variable ST_USER must contain the Username of the storage service. Please set it with export ST_USER=<username>" && exit 1
+    echo -e "If the Swift API shall be used, the environment variable ST_USER must contain the Username of the storage service. Please set it with this command:\nexport ST_USER=<username>" && exit 1
   fi
   
   # ... the script needs to check, if the environment variable ST_KEY is set
   if [ -z "$ST_KEY" ] ; then
-    echo "If the Swift API shall be used, the environment variable ST_KEY must contain the Password of the storage service. Please set it with export ST_KEY=<password>" && exit 1
+    echo -e "If the Swift API shall be used, the environment variable ST_KEY must contain the Password of the storage service. Please set it with this command:\nexport ST_KEY=<password>" && exit 1
   fi
 fi
 
@@ -212,7 +212,9 @@ if [ "$PARALLEL" -eq 1 ] ; then
   # use the Swift API
   if [ "$SWIFT_API" -eq 1 ] ; then
     # Upload files in parallel
-    if find $DIRECTORY/*.txt | parallel swift post $BUCKET {} ; then
+    # The swift client can upload in parallel (and does so per default) but in order to keep the code simple,
+    # s3perf uses the parallel command here too.
+    if find $DIRECTORY/*.txt | parallel swift upload --object-threads 1 $BUCKET {} ; then
       echo "Files have been uploaded."
     else
       echo "Unable to upload the files." && exit 1
@@ -231,7 +233,9 @@ else
   # use the Swift API
   if [ "$SWIFT_API" -eq 1 ] ; then
     # Upload files sequentially
-    if swift upload $BUCKET $DIRECTORY/*.txt ; then
+    # The swift client can upload in parallel (and does so per default) but in order to keep the code simple,
+    # s3perf uses the parallel command here too.
+    if swift upload --object-threads 1 $BUCKET $DIRECTORY/*.txt ; then
       echo "Files have been uploaded."
     else
       echo "Unable to upload the files." && exit 1
@@ -273,11 +277,13 @@ echo ${LIST_OF_FILES}
 if [ "$PARALLEL" -eq 1 ] ; then
   # use the Swift API
   if [ "$SWIFT_API" -eq 1 ] ; then
-    # Upload files in parallel
-    if find $DIRECTORY/*.txt | parallel swift download $BUCKET {} ; then
-      echo "Files have been uploaded."
+    # Upload files in parallel 
+    # The swift client can download in parallel (and does so per default) but in order to keep the code simple,
+    # s3perf uses the parallel command here too.
+    if find $DIRECTORY/*.txt | parallel swift download --object-threads=1 $BUCKET {} ; then
+      echo "Files have been downloaded."
     else
-      echo "Unable to upload the files." && exit 1
+      echo "Unable to downloaded. the files." && exit 1
     fi
   else
   # use the S3 API
@@ -292,7 +298,7 @@ else
   # use the Swift API
   if [ "$SWIFT_API" -eq 1 ] ; then
     # Download files sequentially
-    if swift download --output-dir $DIRECTORY $BUCKET/*.txt  ; then
+    if swift download --object-threads=1 $BUCKET $DIRECTORY/*.txt ; then
       echo "Files have been downloaded."
     else
       echo "Unable to download the files." && exit 1
@@ -335,23 +341,48 @@ TIME_ERASE_OBJECTS_START=`date +%s.%N`
 # -----------------------------
 
 
-# use the Swift API
-if [ "$SWIFT_API" -eq 1 ] ; then
-  # Erase files (objects) inside the bucket
-  if find $DIRECTORY/*.txt | swift delete $BUCKET {} ; then
-    echo "Files inside the bucket ${BUCKET} have been erased"
+# If the "parallel" flag has been set, download in parallel with GNU parallel
+if [ "$PARALLEL" -eq 1 ] ; then
+  # use the Swift API
+  if [ "$SWIFT_API" -eq 1 ] ; then
+    # Erase files (objects) inside the bucket in parallel 
+    # The swift client can erase in parallel (and does so per default) but in order to keep the code simple,
+    # s3perf uses the parallel command here too.
+    if find $DIRECTORY/*.txt | parallel swift delete --object-threads=1 $BUCKET {} ; then
+      echo "Files inside the bucket (container) ${BUCKET} have been erased"
+    else
+      echo "Unable to erase the files inside the bucket (container) ${BUCKET}." && exit 1
+    fi
   else
-    echo "Unable to erase the files inside the bucket ${BUCKET}." && exit 1
+  # use the S3 API  
+    #  Erase files (objects) inside the bucket in parallel
+    if find $DIRECTORY/*.txt | parallel s3cmd del s3://$BUCKET/{} ; then
+      echo "Files inside the bucket ${BUCKET} have been erased"
+    else
+      echo "Unable to erase the files inside the bucket ${BUCKET}." && exit 1
+    fi
   fi
 else
-  # use the S3 API
-  # Erase files (objects) inside the bucket
-  if s3cmd del s3://$BUCKET/* ; then
-    echo "Files inside the bucket ${BUCKET} have been erased"
+  # use the Swift API
+  if [ "$SWIFT_API" -eq 1 ] ; then
+    # Erase files (objects) inside the bucket sequentially
+    if swift delete --object-threads=1 $BUCKET $DIRECTORY/*.txt ; then
+      echo "Files inside the bucket (container) ${BUCKET} have been erased"
+    else
+      echo "Unable to erase the files inside the bucket (container) ${BUCKET}." && exit 1
+    fi
   else
-    echo "Unable to erase the files inside the bucket ${BUCKET}." && exit 1
+  # use the S3 API
+    # Erase files (objects) inside the bucket sequentially
+    if s3cmd del s3://$BUCKET/* ; then
+      echo "Files inside the bucket ${BUCKET} have been erased"
+    else
+      echo "Unable to erase the files inside the bucket ${BUCKET}." && exit 1
+    fi
   fi
 fi
+
+
 
 
 # End of the 4th time measurement
@@ -380,7 +411,7 @@ if [ "$SWIFT_API" -eq 1 ] ; then
   else
     echo "Unable to erase the bucket (container) ${BUCKET}." && exit 1
   fi
-elif 
+else 
   # use the S3 API
   if s3cmd rb s3://$BUCKET ; then
     echo "Bucket ${BUCKET} has been erased."
