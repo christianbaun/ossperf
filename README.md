@@ -17,7 +17,7 @@ Storage services tested with this tool are so far:
 
 ## Synopsis
 
-    s3perf.sh -n files -s size [-u] [a] [-k] [-p]
+    s3perf.sh -n files -s size [-u] [a] [-k] [-p] [-o]
 
     Arguments:
     -h : show this message on screen
@@ -27,6 +27,7 @@ Storage services tested with this tool are so far:
     -a : use the Swift API and not the S3 API (this requires the python client for the Swift API and the environment variables ST_AUTH, ST_USER and ST_KEY)
     -k : keep the local files and the directory afterwards (do not clean up)
     -p : upload and download the files in parallel
+    -o : appended the results to a local file results.csv
 
 ## Requirements
 
