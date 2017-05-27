@@ -36,6 +36,7 @@ These software packages must be installed on all worker nodes:
 - s3cmd 1.6.1
 - bc 1.06.95
 - parallel 20130922
+- swift -- Python client for the Swift API (tested with version 2.3.1)
 
 ## Example
 
