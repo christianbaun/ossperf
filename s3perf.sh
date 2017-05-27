@@ -6,8 +6,8 @@
 # author:       Dr. Christian Baun, Rosa Maria Spanou
 # url:          https://github.com/christianbaun/s3perf
 # license:      GPLv3
-# date:         May 24th 2017
-# version:      1.7
+# date:         May 27th 2017
+# version:      1.8
 # bash_version: 4.3.30(1)-release
 # requires:     md5sum (tested with version 8.23),
 #               bc (tested with version 1.06.95),
@@ -26,7 +26,7 @@ command -v ping >/dev/null 2>&1 || { echo >&2 "s3perf requires the command line 
 
 function usage
 {
-echo "$SCRIPT -n files -s size [-u] [a] [-k] [-p]
+echo "$SCRIPT -n files -s size [-u] [a] [-k] [-p] [-o filename]
 
 This script analyzes the performance and data integrity of S3-compatible
 storage services 
@@ -39,6 +39,7 @@ Arguments:
 -a : use the Swift API and not the S3 API (this requires the python client for the Swift API and the environment variables ST_AUTH, ST_USER and ST_KEY)
 -k : keep the local files and the directory afterwards (do not clean up)
 -p : upload and download the files in parallel
+-o : appended the results to a local file results.csv
 "
 exit 0
 }
@@ -51,9 +52,10 @@ SWIFT_API=0
 NOT_CLEAN_UP=0
 PARALLEL=0
 LIST_OF_FILES=
+OUTPUT_FILE=0
 
 
-while getopts "hn:s:uakp" Arg ; do
+while getopts "hn:s:uakpo" Arg ; do
   case $Arg in
     h) usage ;;
     n) NUM_FILES=$OPTARG ;;
@@ -63,6 +65,7 @@ while getopts "hn:s:uakp" Arg ; do
     a) SWIFT_API=1 ;;
     k) NOT_CLEAN_UP=1 ;;
     p) PARALLEL=1 ;;
+    o) OUTPUT_FILE=1 ;;
     \?) echo "Invalid option: $OPTARG" >&2
         exit 1
         ;;
@@ -112,6 +115,9 @@ DIRECTORY="testfiles"
 # "Bucket names should be between 3 and 63 characters long"
 # "Bucket names cannot contain dashes next to periods (e.g., my-.bucket.com and my.-bucket are invalid)"
 # "Bucket names cannot contain periods"
+
+# Filename of the output file
+OUTPUT_FILENAME="results.csv"
 
 if [[ "UPPERCASE" -eq 1 ]] ; then
    BUCKET="S3PERF-TESTBUCKET"
@@ -449,3 +455,25 @@ echo 'Required time to erase the bucket:                  '${TIME_ERASE_BUCKET}s
 TIME_SUM=`echo "scale=3 ; (${TIME_CREATE_BUCKET} + ${TIME_OBJECTS_UPLOAD} + ${TIME_OBJECTS_DOWNLOAD} + ${TIME_ERASE_OBJECTS} + ${TIME_ERASE_BUCKET})/1" | bc | sed 's/^\./0./'`
 
 echo 'Required time to perform all S3-related operations: '${TIME_SUM}s
+
+# Create an output file only of the command line parameter was set => value of OUTPUT_FILE is not equal 0
+if ([[ "$OUTPUT_FILE" -ne 0 ]]) ; then
+  # If the output file did not already exist...
+  if [ ! -f ${OUTPUT_FILENAME} ] ; then  
+    # .. create in the first line the header first
+    if echo -e "NUM_FILES SIZE_FILES TIME_CREATE_BUCKET TIME_OBJECTS_UPLOAD TIME_OBJECTS_DOWNLOAD TIME_ERASE_OBJECTS TIME_ERASE_BUCKET TIME_SUM" >> ${OUTPUT_FILENAME} ; then
+      echo "A new output file ${OUTPUT_FILENAME} has been created."
+    else
+      echo "Unable to create a new output file ${OUTPUT_FILENAME}" && exit 1
+    fi
+  fi
+  # If the output file did already exist...
+  if echo -e "${NUM_FILES} ${SIZE_FILES} ${TIME_CREATE_BUCKET} ${TIME_OBJECTS_UPLOAD} ${TIME_OBJECTS_DOWNLOAD} ${TIME_ERASE_OBJECTS} ${TIME_ERASE_BUCKET} ${TIME_SUM}" >> ${OUTPUT_FILENAME} ; then
+    echo "The results of this benchmark run have been appended to the output file ${OUTPUT_FILENAME}"
+  else
+    echo "Unable to append the results of this benchmark run to the output file ${OUTPUT_FILENAME}" && exit 1
+  fi
+fi
+
+
+
