@@ -6,8 +6,8 @@
 # author:       Dr. Christian Baun, Rosa Maria Spanou
 # url:          https://github.com/christianbaun/s3perf
 # license:      GPLv3
-# date:         May 27th 2017
-# version:      1.8
+# date:         May 28th 2017
+# version:      1.9
 # bash_version: 4.3.30(1)-release
 # requires:     md5sum (tested with version 8.23),
 #               bc (tested with version 1.06.95),
@@ -260,6 +260,7 @@ fi
 # End of the 2nd time measurement
 TIME_OBJECTS_UPLOAD_END=`date +%s.%N`
 
+
 # Duration of the 2nd time measurement
 # The "/1" is stupid, but it is required to get the "scale" working.
 # Otherwise the "scale" is just ignored
@@ -271,9 +272,41 @@ TIME_OBJECTS_UPLOAD=`echo "scale=3 ; (${TIME_OBJECTS_UPLOAD_END} - ${TIME_OBJECT
 sleep 1
 
 # Start of the 3rd time measurement
-TIME_OBJECTS_DOWNLOAD_START=`date +%s.%N`
+TIME_OBJECTS_LIST_START=`date +%s.%N`
 
-echo ${LIST_OF_FILES}
+# ----------------------------------------
+# | List files inside bucket / container |
+# ----------------------------------------
+# In the Swift ecosystem, the buckets are called conainers. 
+
+# use the Swift API
+if [ "$SWIFT_API" -eq 1 ] ; then
+  if swift list $BUCKET ; then
+    echo "The list of objects inside ${BUCKET} has been fetched."
+  else
+    echo "Unable to fetch the list of objects inside ${BUCKET}." && exit 1
+  fi
+else
+  # use the S3 API
+  if s3cmd ls s3://$BUCKET ; then
+    echo "The list of objects inside ${BUCKET} has been fetched."
+  else
+    echo "Unable to fetch the list of objects inside ${BUCKET}." && exit 1
+  fi
+fi
+
+# End of the 3rd time measurement
+TIME_OBJECTS_LIST_END=`date +%s.%N`
+
+# Duration of the 3rd time measurement
+# The "/1" is stupid, but it is required to get the "scale" working.
+# Otherwise the "scale" is just ignored
+# The sed command ensures that results < 1 have a leading 0 before the "."
+TIME_OBJECTS_LIST=`echo "scale=3 ; (${TIME_OBJECTS_LIST_END} - ${TIME_OBJECTS_LIST_START})/1" | bc | sed 's/^\./0./'`
+
+
+# Start of the 4th time measurement
+TIME_OBJECTS_DOWNLOAD_START=`date +%s.%N`
 
 # --------------------------------
 # | Download the Files (Objects) |
@@ -320,10 +353,10 @@ else
   fi
 fi
 
-# End of the 3rd time measurement
+# End of the 4th time measurement
 TIME_OBJECTS_DOWNLOAD_END=`date +%s.%N`
 
-# Duration of the 3rd time measurement
+# Duration of the 4th time measurement
 # The "/1" is stupid, but it is required to get the "scale" working.
 # Otherwise the "scale" is just ignored
 # The sed command ensures that results < 1 have a leading 0 before the "."
@@ -339,13 +372,12 @@ else
 fi
 
 
-# Start of the 4th time measurement
+# Start of the 5th time measurement
 TIME_ERASE_OBJECTS_START=`date +%s.%N`
 
 # -----------------------------
 # | Erase the Files (Objects) |
 # -----------------------------
-
 
 # If the "parallel" flag has been set, download in parallel with GNU parallel
 if [ "$PARALLEL" -eq 1 ] ; then
@@ -388,22 +420,19 @@ else
   fi
 fi
 
-
-
-
-# End of the 4th time measurement
+# End of the 5th time measurement
 TIME_ERASE_OBJECTS_END=`date +%s.%N`
 
-# Duration of the 4th time measurement
+
+# Duration of the 5th time measurement
 # The "/1" is stupid, but it is required to get the "scale" working.
 # Otherwise the "scale" is just ignored
 # The sed command ensures that results < 1 have a leading 0 before the "."
 TIME_ERASE_OBJECTS=`echo "scale=3 ; (${TIME_ERASE_OBJECTS_END} - ${TIME_ERASE_OBJECTS_START})/1" | bc | sed 's/^\./0./'`
 
 
-# Start of the 5th time measurement
+# Start of the 6th time measurement
 TIME_ERASE_BUCKET_START=`date +%s.%N`
-
 
 # ----------------------------
 # | Erase bucket / container |
@@ -427,10 +456,10 @@ else
 fi
 
 
-# End of the 5th time measurement
+# End of the 6th time measurement
 TIME_ERASE_BUCKET_END=`date +%s.%N`
 
-# Duration of the 5th time measurement
+# Duration of the 6th time measurement
 # The "/1" is stupid, but it is required to get the "scale" working.
 # Otherwise the "scale" is just ignored
 # The sed command ensures that results < 1 have a leading 0 before the "."
@@ -448,11 +477,12 @@ fi
 
 echo 'Required time to create the bucket:                 '${TIME_CREATE_BUCKET}s
 echo 'Required time to upload the files:                  '${TIME_OBJECTS_UPLOAD}s
+echo 'Required time to fetch a list of files:             '${TIME_OBJECTS_LIST}s
 echo 'Required time to download the files:                '${TIME_OBJECTS_DOWNLOAD}s
 echo 'Required time to erase the objects:                 '${TIME_ERASE_OBJECTS}s
 echo 'Required time to erase the bucket:                  '${TIME_ERASE_BUCKET}s
 
-TIME_SUM=`echo "scale=3 ; (${TIME_CREATE_BUCKET} + ${TIME_OBJECTS_UPLOAD} + ${TIME_OBJECTS_DOWNLOAD} + ${TIME_ERASE_OBJECTS} + ${TIME_ERASE_BUCKET})/1" | bc | sed 's/^\./0./'`
+TIME_SUM=`echo "scale=3 ; (${TIME_CREATE_BUCKET} + ${TIME_OBJECTS_UPLOAD} + ${TIME_OBJECTS_LIST} + ${TIME_OBJECTS_DOWNLOAD} + ${TIME_ERASE_OBJECTS} + ${TIME_ERASE_BUCKET})/1" | bc | sed 's/^\./0./'`
 
 echo 'Required time to perform all S3-related operations: '${TIME_SUM}s
 
@@ -461,14 +491,14 @@ if ([[ "$OUTPUT_FILE" -ne 0 ]]) ; then
   # If the output file did not already exist...
   if [ ! -f ${OUTPUT_FILENAME} ] ; then  
     # .. create in the first line the header first
-    if echo -e "NUM_FILES SIZE_FILES TIME_CREATE_BUCKET TIME_OBJECTS_UPLOAD TIME_OBJECTS_DOWNLOAD TIME_ERASE_OBJECTS TIME_ERASE_BUCKET TIME_SUM" >> ${OUTPUT_FILENAME} ; then
+    if echo -e "NUM_FILES SIZE_FILES TIME_CREATE_BUCKET TIME_OBJECTS_UPLOAD TIME_OBJECTS_LIST TIME_OBJECTS_DOWNLOAD TIME_ERASE_OBJECTS TIME_ERASE_BUCKET TIME_SUM" >> ${OUTPUT_FILENAME} ; then
       echo "A new output file ${OUTPUT_FILENAME} has been created."
     else
       echo "Unable to create a new output file ${OUTPUT_FILENAME}" && exit 1
     fi
   fi
   # If the output file did already exist...
-  if echo -e "${NUM_FILES} ${SIZE_FILES} ${TIME_CREATE_BUCKET} ${TIME_OBJECTS_UPLOAD} ${TIME_OBJECTS_DOWNLOAD} ${TIME_ERASE_OBJECTS} ${TIME_ERASE_BUCKET} ${TIME_SUM}" >> ${OUTPUT_FILENAME} ; then
+  if echo -e "${NUM_FILES} ${SIZE_FILES} ${TIME_CREATE_BUCKET} ${TIME_OBJECTS_UPLOAD} ${TIME_OBJECTS_LIST} ${TIME_OBJECTS_DOWNLOAD} ${TIME_ERASE_OBJECTS} ${TIME_ERASE_BUCKET} ${TIME_SUM}" >> ${OUTPUT_FILENAME} ; then
     echo "The results of this benchmark run have been appended to the output file ${OUTPUT_FILENAME}"
   else
     echo "Unable to append the results of this benchmark run to the output file ${OUTPUT_FILENAME}" && exit 1
