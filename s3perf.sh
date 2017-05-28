@@ -117,7 +117,7 @@ DIRECTORY="testfiles"
 # "Bucket names cannot contain periods"
 
 # Filename of the output file
-OUTPUT_FILENAME="results.csv"
+OUTPUT_FILENAME=results.csv
 
 if [[ "UPPERCASE" -eq 1 ]] ; then
    BUCKET="S3PERF-TESTBUCKET"
@@ -491,19 +491,17 @@ if ([[ "$OUTPUT_FILE" -ne 0 ]]) ; then
   # If the output file did not already exist...
   if [ ! -f ${OUTPUT_FILENAME} ] ; then  
     # .. create in the first line the header first
-    if echo -e "NUM_FILES SIZE_FILES TIME_CREATE_BUCKET TIME_OBJECTS_UPLOAD TIME_OBJECTS_LIST TIME_OBJECTS_DOWNLOAD TIME_ERASE_OBJECTS TIME_ERASE_BUCKET TIME_SUM" >> ${OUTPUT_FILENAME} ; then
+    if echo -e "DATE TIME NUM_FILES SIZE_FILES TIME_CREATE_BUCKET TIME_OBJECTS_UPLOAD TIME_OBJECTS_LIST TIME_OBJECTS_DOWNLOAD TIME_ERASE_OBJECTS TIME_ERASE_BUCKET TIME_SUM" >> ${OUTPUT_FILENAME} ; then
       echo "A new output file ${OUTPUT_FILENAME} has been created."
     else
       echo "Unable to create a new output file ${OUTPUT_FILENAME}" && exit 1
     fi
   fi
   # If the output file did already exist...
-  if echo -e "${NUM_FILES} ${SIZE_FILES} ${TIME_CREATE_BUCKET} ${TIME_OBJECTS_UPLOAD} ${TIME_OBJECTS_LIST} ${TIME_OBJECTS_DOWNLOAD} ${TIME_ERASE_OBJECTS} ${TIME_ERASE_BUCKET} ${TIME_SUM}" >> ${OUTPUT_FILENAME} ; then
+  if echo -e "`date +%Y-%m-%d` `date +%H:%M:%S` ${NUM_FILES} ${SIZE_FILES} ${TIME_CREATE_BUCKET} ${TIME_OBJECTS_UPLOAD} ${TIME_OBJECTS_LIST} ${TIME_OBJECTS_DOWNLOAD} ${TIME_ERASE_OBJECTS} ${TIME_ERASE_BUCKET} ${TIME_SUM}" >> ${OUTPUT_FILENAME} ; then
     echo "The results of this benchmark run have been appended to the output file ${OUTPUT_FILENAME}"
   else
     echo "Unable to append the results of this benchmark run to the output file ${OUTPUT_FILENAME}" && exit 1
   fi
 fi
-
-
 
