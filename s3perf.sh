@@ -3,18 +3,21 @@
 # title:        s3perf.sh
 # description:  This script analyzes the performance and data integrity of 
 #               S3-compatible storage services 
-# author:       Dr. Christian Baun, Rosa Maria Spanou
+# author:       Dr. Christian Baun, Rosa Maria Spanou, Marius Wernicke
 # url:          https://github.com/christianbaun/s3perf
 # license:      GPLv3
-# date:         May 28th 2017
-# version:      1.9
+# date:         July 13th 2017
+# version:      1.91
 # bash_version: 4.3.30(1)-release
 # requires:     md5sum (tested with version 8.23),
 #               bc (tested with version 1.06.95),
-#               s3cmd (tested with versions 1.5.0 and 1.6.1),
+#               s3cmd (tested with versions 1.5.0 and 1.6.1 and 2.0.0),
 #               parallel (tested with version 20130922),
-#               swift -- Python client for the Swift API (tested with version 2.3.1)
+#               swift -- Python client for the Swift API (tested with version 2.3.1),
+#				az -- Python client for the Azure CLI (tested with version 2.0),
+#				gsutil -- Python client for the Google API (tested with version 4.27)
 # notes:        s3cmd need to be configured first via s3cmd --configure
+#				gsutil need to be configured first via gsutil config -a
 # example:      ./s3perf.sh -n 5 -s 1048576 # 5 files of 1 MB size each
 # ----------------------------------------------------------------------------
 
@@ -26,7 +29,7 @@ command -v ping >/dev/null 2>&1 || { echo >&2 "s3perf requires the command line 
 
 function usage
 {
-echo "$SCRIPT -n files -s size [-u] [a] [-k] [-p] [-o]
+echo "$SCRIPT -n files -s size [-u] [-a] [-k] [-p] [-o]
 
 This script analyzes the performance and data integrity of S3-compatible
 storage services 
@@ -37,6 +40,8 @@ Arguments:
 -s : size of the files to be created in bytes (max 16777216 = 16 MB)
 -u : use upper-case letters for the bucket name (this is required for Nimbus Cumulus and S3ninja)
 -a : use the Swift API and not the S3 API (this requires the python client for the Swift API and the environment variables ST_AUTH, ST_USER and ST_KEY)
+-z : use the Azure CLI instead of the S3 API (this requires the python client for the Azure CLI and the environment variables AZURE_STORAGE_ACCOUNT and AZURE_STORAGE_ACCESS_KEY)
+-g : use the Google API instead of the S3 API (this requires the python client for the Google API)
 -k : keep the local files and the directory afterwards (do not clean up)
 -p : upload and download the files in parallel
 -o : appended the results to a local file results.csv
@@ -49,13 +54,15 @@ NUM_FILES=
 SIZE_FILES=
 UPPERCASE=0
 SWIFT_API=0
+AZURE_CLI=0
+GOOGLE_API=0
 NOT_CLEAN_UP=0
 PARALLEL=0
 LIST_OF_FILES=
 OUTPUT_FILE=0
 
 
-while getopts "hn:s:uakpo" Arg ; do
+while getopts "hn:s:uazgkpo" Arg ; do
   case $Arg in
     h) usage ;;
     n) NUM_FILES=$OPTARG ;;
@@ -63,12 +70,14 @@ while getopts "hn:s:uakpo" Arg ; do
     # If the flag has been set => $NOT_CLEAN_UP gets value 1
     u) UPPERCASE=1 ;;
     a) SWIFT_API=1 ;;
+    z) AZURE_CLI=1 ;;
+    g) GOOGLE_API=1 ;;
     k) NOT_CLEAN_UP=1 ;;
     p) PARALLEL=1 ;;
     o) OUTPUT_FILE=1 ;;
     \?) echo "Invalid option: $OPTARG" >&2
-        exit 1
-        ;;
+       exit 1
+       ;;
   esac
 done
 
@@ -82,7 +91,7 @@ fi
 # Only if the user wants to use the Swift API and not the S3 API
 if [ "$SWIFT_API" -eq 1 ] ; then
   # ... the script needs to check, if the command line tool swift installed
-  command -v swift >/dev/null 2>&1 || { echo -e >&2 "If the Swift API shall be used, the command line tool swift need to be installed first. Please install it. Probably these commands will install the swift client:\n\cd \$HOME; git clone https://github.com/openstack/python-swiftclient.git\n\cd \$HOME/python-swiftclient; sudo python setup.py develop; cd -."; exit 1; }
+  command -v swift >/dev/null 2>&1 || { echo -e >&2 "If the Swift API shall be used, the command line tool swift need to be installed first. Please install it. Probably these commands will install the swift client:\ncd \$HOME; git clone https://github.com/openstack/python-swiftclient.git\ncd $HOME/python-swiftclient; sudo python setup.py develop; cd -."; exit 1; }
   
   # ... the script needs to check, if the environment variable ST_AUTH is set
   if [ -z "$ST_AUTH" ] ; then
@@ -98,6 +107,28 @@ if [ "$SWIFT_API" -eq 1 ] ; then
   if [ -z "$ST_KEY" ] ; then
     echo -e "If the Swift API shall be used, the environment variable ST_KEY must contain the Password of the storage service. Please set it with this command:\nexport ST_KEY=<password>" && exit 1
   fi
+fi
+
+# Only if the user wants to use the Azure CLI and not the S3 API
+if [ "$AZURE_CLI" -eq 1 ] ; then
+  # ... the script needs to check, if the command line tool az installed
+  command -v az >/dev/null 2>&1 || { echo -e >&2 "If the Azure CLI shall be used, the command line tool az need to be installed first. Please install it. Probably these commands will install the az client:\ncd $HOME; curl -L https://aka.ms/InstallAzureCli | bash; exec -l $SHELL"; exit 1; }
+  
+  # ... the script needs to check, if the environment variable AZURE_STORAGE_ACCOUNT is set
+  if [ -z "$AZURE_STORAGE_ACCOUNT" ] ; then
+    echo -e "If the Azure CLI shall be used, the environment variable AZURE_STORAGE_ACCOUNT must contain the Storage Account Name of the storage service. Please set it with this command:\nexport AZURE_STORAGE_ACCOUNT=<storage_account_name>" && exit 1
+  fi
+  
+  # ... the script needs to check, if the environment variable AZURE_STORAGE_ACCESS_KEY is set
+  if [ -z "$AZURE_STORAGE_ACCESS_KEY" ] ; then
+    echo -e "If the Azure CLI shall be used, the environment variable AZURE_STORAGE_ACCESS_KEY must contain the Account Key of the storage service. Please set it with this command:\nexport AZURE_STORAGE_ACCESS_KEY=<storage_account_key>" && exit 1
+  fi
+fi
+
+# Only if the user wants to use the Google API and not the S3 API
+if [ "$GOOGLE_API" -eq 1 ] ; then
+  # ... the script needs to check, if the command line tool gsutil installed
+  command -v gsutil >/dev/null 2>&1 || { echo -e >&2 "If the Google API shall be used, the command line tool gsutil need to be installed first. Please install it. Probably these commands will install the gsutil client:\nsudo apt install python-pip; sudo pip install gsutil"; exit 1; }
 fi
 
 # Path of the directory for the files
@@ -177,7 +208,7 @@ TIME_CREATE_BUCKET_START=`date +%s.%N`
 # -------------------------------
 # | Create a bucket / container |
 # -------------------------------
-# In the Swift ecosystem, the buckets are called conainers. 
+# In the Swift and Azure ecosystem, the buckets are called conainers. 
 
 # use the Swift API
 if [ "$SWIFT_API" -eq 1 ] ; then
@@ -187,12 +218,30 @@ if [ "$SWIFT_API" -eq 1 ] ; then
     echo "Unable to create the bucket (container) ${BUCKET}." && exit 1
   fi
 else
-  # use the S3 API
-  if s3cmd mb s3://$BUCKET ; then
-    echo "Bucket ${BUCKET} has been created."
+  # use the Azure CLI
+  if [ "$AZURE_CLI" -eq 1 ] ; then
+    if az storage container create --name $BUCKET ; then
+      echo "Bucket ${BUCKET} has been created."
+    else
+      echo "Unable to create the bucket (container) ${BUCKET}." && exit 1
+    fi
   else
-    echo "Unable to create the bucket ${BUCKET}." && exit 1
-  fi
+	# use the Google API
+    if [ "$GOOGLE_API" -eq 1 ] ; then
+      if gsutil mb -l EU gs://$BUCKET ; then
+        echo "Bucket ${BUCKET} has been created."
+      else
+        echo "Unable to create the bucket (container) ${BUCKET}." && exit 1
+      fi
+    else
+      # use the S3 API
+      if s3cmd mb s3://$BUCKET ; then
+        echo "Bucket ${BUCKET} has been created."
+      else
+        echo "Unable to create the bucket ${BUCKET}." && exit 1
+      fi
+    fi
+  fi  
 fi
 
 # End of the 1st time measurement
@@ -226,13 +275,34 @@ if [ "$PARALLEL" -eq 1 ] ; then
       echo "Unable to upload the files." && exit 1
     fi
   else
-  # use the S3 API
-    # Upload files in parallel
-    if find $DIRECTORY/*.txt | parallel s3cmd put {} s3://$BUCKET ; then
-      echo "Files have been uploaded."
+    # use the Azure CLI
+    # The Azure CLI upload in parallel per default and can't use GNU Parallel.
+    if [ "$AZURE_CLI" -eq 1 ] ; then
+      # Upload files in parallel
+      if find $DIRECTORY/*.txt | az storage blob upload-batch --destination $BUCKET --source $DIRECTORY/ ; then
+        echo "Files have been uploaded."
+      else
+        echo "Unable to upload the files." && exit 1
+      fi
     else
-      echo "Unable to upload the files." && exit 1
-    fi
+	  # use the Google API
+	  # The Google API upload in parallel per -m and can't use GNU Parallel.
+      if [ "$GOOGLE_API" -eq 1 ] ; then
+        if find $DIRECTORY/*.txt | gsutil -m cp -r $DIRECTORY/*.txt gs://$BUCKET ; then
+          echo "Files have been uploaded."
+        else
+          echo "Unable to upload the files." && exit 1
+        fi
+      else
+        # use the S3 API
+        # Upload files in parallel
+        if find $DIRECTORY/*.txt | parallel s3cmd put {} s3://$BUCKET ; then
+          echo "Files have been uploaded."
+        else
+          echo "Unable to upload the files." && exit 1
+        fi
+      fi
+    fi  
   fi
 else
 # If the "parallel" flag has NOT been set, upload the files sequentially
@@ -247,14 +317,33 @@ else
       echo "Unable to upload the files." && exit 1
     fi
   else
-  # use the S3 API
-    # Upload files sequentially
-    if s3cmd put $DIRECTORY/*.txt s3://$BUCKET ; then
-      echo "Files have been uploaded."
+    # use the Azure CLI
+    if [ "$AZURE_CLI" -eq 1 ] ; then
+      # Upload files sequentially
+      if az storage blob upload-batch --destination $BUCKET --source $DIRECTORY/ ; then
+        echo "Files have been uploaded."
+      else
+        echo "Unable to upload the files." && exit 1
+      fi
     else
-      echo "Unable to upload the files." && exit 1
+    # use the Google API
+      if [ "$GOOGLE_API" -eq 1 ] ; then
+        if gsutil cp -r $DIRECTORY/*.txt gs://$BUCKET ; then
+          echo "Files have been uploaded."
+        else
+          echo "Unable to upload the files." && exit 1
+        fi
+      else
+      # use the S3 API
+        # Upload files sequentially
+        if s3cmd put $DIRECTORY/*.txt s3://$BUCKET ; then
+          echo "Files have been uploaded."
+        else
+          echo "Unable to upload the files." && exit 1
+        fi  
+      fi
     fi
-  fi    
+  fi  
 fi
 
 # End of the 2nd time measurement
@@ -277,7 +366,7 @@ TIME_OBJECTS_LIST_START=`date +%s.%N`
 # ----------------------------------------
 # | List files inside bucket / container |
 # ----------------------------------------
-# In the Swift ecosystem, the buckets are called conainers. 
+# In the Swift and Azure ecosystem, the buckets are called conainers. 
 
 # use the Swift API
 if [ "$SWIFT_API" -eq 1 ] ; then
@@ -287,12 +376,30 @@ if [ "$SWIFT_API" -eq 1 ] ; then
     echo "Unable to fetch the list of objects inside ${BUCKET}." && exit 1
   fi
 else
-  # use the S3 API
-  if s3cmd ls s3://$BUCKET ; then
-    echo "The list of objects inside ${BUCKET} has been fetched."
+  # use the Azure CLI
+  if [ "$AZURE_CLI" -eq 1 ] ; then
+    if az storage blob list --container-name $BUCKET --output table ; then
+      echo "The list of objects inside ${BUCKET} has been fetched."
+    else
+      echo "Unable to fetch the list of objects inside ${BUCKET}." && exit 1
+    fi
   else
-    echo "Unable to fetch the list of objects inside ${BUCKET}." && exit 1
-  fi
+  # use the Google API
+    if [ "$GOOGLE_API" -eq 1 ] ; then
+      if gsutil ls gs://$BUCKET ; then
+        echo "The list of objects inside ${BUCKET} has been fetched."
+      else
+        echo "Unable to fetch the list of objects inside ${BUCKET}." && exit 1
+      fi
+    else
+    # use the S3 API
+      if s3cmd ls s3://$BUCKET ; then
+        echo "The list of objects inside ${BUCKET} has been fetched."
+      else
+        echo "Unable to fetch the list of objects inside ${BUCKET}." && exit 1
+      fi
+    fi
+  fi  
 fi
 
 # End of the 3rd time measurement
@@ -316,7 +423,7 @@ TIME_OBJECTS_DOWNLOAD_START=`date +%s.%N`
 if [ "$PARALLEL" -eq 1 ] ; then
   # use the Swift API
   if [ "$SWIFT_API" -eq 1 ] ; then
-    # Upload files in parallel 
+    # Download files in parallel 
     # The swift client can download in parallel (and does so per default) but in order to keep the code simple,
     # s3perf uses the parallel command here too.
     if find $DIRECTORY/*.txt | parallel swift download --object-threads=1 $BUCKET {} ; then
@@ -325,13 +432,34 @@ if [ "$PARALLEL" -eq 1 ] ; then
       echo "Unable to downloaded. the files." && exit 1
     fi
   else
-  # use the S3 API
-    # Download files in parallel
-    if find ${DIRECTORY}/*.txt -type f -printf "%f\n" | parallel s3cmd get --force s3://$BUCKET/{} $DIRECTORY/ ; then
-      echo "Files have been downloaded."
+  # use the Azure CLI
+    if [ "$AZURE_CLI" -eq 1 ] ; then
+      # Download files in parallel
+      # The Azure CLI download in parallel per default and can't use GNU Parallel.
+      if find $DIRECTORY/*.txt | az storage blob download-batch --destination $DIRECTORY/ --source $BUCKET ; then
+        echo "Files have been downloaded."
+      else
+        echo "Unable to downloaded. the files." && exit 1
+      fi
     else
-      echo "Unable to download the files." && exit 1
-    fi
+    # use the Google API
+    # The Google API download in parallel per -m and can't use GNU Parallel.
+      if [ "$GOOGLE_API" -eq 1 ] ; then
+        if find $DIRECTORY/*.txt | gsutil -m cp -r gs://$BUCKET $DIRECTORY/ ; then
+          echo "Files have been downloaded."
+        else
+          echo "Unable to downloaded. the files." && exit 1
+        fi
+      else
+      # use the S3 API
+        # Download files in parallel
+        if find ${DIRECTORY}/*.txt -type f -printf "%f\n" | parallel s3cmd get --force s3://$BUCKET/{} $DIRECTORY/ ; then
+          echo "Files have been downloaded."
+        else
+          echo "Unable to download the files." && exit 1
+        fi
+      fi
+    fi  
   fi
 else
   # use the Swift API
@@ -343,12 +471,31 @@ else
       echo "Unable to download the files." && exit 1
     fi
   else
-  # use the S3 API
-    # Download files sequentially
-    if s3cmd get --force s3://$BUCKET/*.txt $DIRECTORY/ ; then
-      echo "Files have been downloaded."
+  # use the Azure CLI
+    if [ "$AZURE_CLI" -eq 1 ] ; then
+      # Download files sequentially
+      if az storage blob download-batch --destination $DIRECTORY/ --source $BUCKET ; then
+        echo "Files have been downloaded."
+      else
+        echo "Unable to download the files." && exit 1
+      fi
     else
-      echo "Unable to download the files." && exit 1
+    # use the Google API
+      if [ "$GOOGLE_API" -eq 1 ] ; then
+        if gsutil cp -r gs://$BUCKET/*.txt $DIRECTORY/ ; then
+          echo "Files have been downloaded."
+        else
+          echo "Unable to downloaded. the files." && exit 1
+        fi
+      else
+      # use the S3 API
+        # Download files sequentially
+        if s3cmd get --force s3://$BUCKET/*.txt $DIRECTORY/ ; then
+          echo "Files have been downloaded."
+        else
+          echo "Unable to download the files." && exit 1
+        fi  
+      fi
     fi
   fi
 fi
@@ -392,14 +539,37 @@ if [ "$PARALLEL" -eq 1 ] ; then
       echo "Unable to erase the files inside the bucket (container) ${BUCKET}." && exit 1
     fi
   else
-  # use the S3 API  
-    #  Erase files (objects) inside the bucket in parallel
-    if find $DIRECTORY/*.txt | parallel s3cmd del s3://$BUCKET/{} ; then
-      echo "Files inside the bucket ${BUCKET} have been erased"
+  # use the Azure CLI
+    if [ "$AZURE_CLI" -eq 1 ] ; then
+      # Erase files (objects) inside the bucket in parallel
+      # The Azure CLI delete in parallel per default and can't use GNU Parallel.
+      for i in `az storage blob list --container-name $BUCKET --output table | awk '{print $1}'| sed '1,2d' | sed '/^$/d'` ; do
+		az storage blob delete --name $i --container-name $BUCKET --output table ; done
+		  #echo "Files inside the bucket (container) ${BUCKET} have been erased"
+        #else
+          #echo "Unable to erase the files inside the bucket (container) ${BUCKET}." && exit 1
+        #fi
+	  #done
     else
-      echo "Unable to erase the files inside the bucket ${BUCKET}." && exit 1
-    fi
-  fi
+    # use the Google API
+      # The Google API delete in parallel per -m and can't use GNU Parallel.
+      if [ "$GOOGLE_API" -eq 1 ] ; then
+        if find $DIRECTORY/*.txt | gsutil -m rm gs://$BUCKET/* ; then
+          echo "Files inside the bucket (container) ${BUCKET} have been erased"
+        else
+          echo "Unable to erase the files inside the bucket (container) ${BUCKET}." && exit 1
+        fi
+      else
+      # use the S3 API  
+        #  Erase files (objects) inside the bucket in parallel
+        if find $DIRECTORY/*.txt | parallel s3cmd del --recursive s3://$BUCKET/* ; then
+          echo "Files inside the bucket ${BUCKET} have been erased"
+        else
+          echo "Unable to erase the files inside the bucket ${BUCKET}." && exit 1
+        fi
+      fi
+    fi  
+  fi  
 else
   # use the Swift API
   if [ "$SWIFT_API" -eq 1 ] ; then
@@ -410,15 +580,36 @@ else
       echo "Unable to erase the files inside the bucket (container) ${BUCKET}." && exit 1
     fi
   else
-  # use the S3 API
-    # Erase files (objects) inside the bucket sequentially
-    if s3cmd del s3://$BUCKET/* ; then
-      echo "Files inside the bucket ${BUCKET} have been erased"
+  # use the Azure CLI
+    if [ "$AZURE_CLI" -eq 1 ] ; then
+      # Erase files (objects) inside the bucket sequentially
+      for file in $DIRECTORY/* ; do
+        if az storage blob delete --container-name $BUCKET --name "$file" ; then
+          echo "Files inside the bucket (container) ${BUCKET} have been erased"
+        else
+          echo "Unable to erase the files inside the bucket (container) ${BUCKET}." && exit 1
+        fi
+      done
     else
-      echo "Unable to erase the files inside the bucket ${BUCKET}." && exit 1
+    # use the Google API
+      if [ "$GOOGLE_API" -eq 1 ] ; then
+        if gsutil rm gs://$BUCKET/* ; then
+          echo "Files inside the bucket (container) ${BUCKET} have been erased"
+        else
+          echo "Unable to erase the files inside the bucket (container) ${BUCKET}." && exit 1
+        fi
+      else
+      # use the S3 API
+        # Erase files (objects) inside the bucket sequentially
+        if s3cmd del s3://$BUCKET/* ; then
+          echo "Files inside the bucket ${BUCKET} have been erased"
+        else
+          echo "Unable to erase the files inside the bucket ${BUCKET}." && exit 1
+        fi
+      fi
     fi
-  fi
-fi
+  fi  
+fi  
 
 # End of the 5th time measurement
 TIME_ERASE_OBJECTS_END=`date +%s.%N`
@@ -437,7 +628,7 @@ TIME_ERASE_BUCKET_START=`date +%s.%N`
 # ----------------------------
 # | Erase bucket / container |
 # ----------------------------
-# In the Swift ecosystem, the buckets are called conainers. 
+# In the Swift and Azure ecosystem, the buckets are called conainers. 
 
 # use the Swift API
 if [ "$SWIFT_API" -eq 1 ] ; then
@@ -446,13 +637,31 @@ if [ "$SWIFT_API" -eq 1 ] ; then
   else
     echo "Unable to erase the bucket (container) ${BUCKET}." && exit 1
   fi
-else 
-  # use the S3 API
-  if s3cmd rb s3://$BUCKET ; then
-    echo "Bucket ${BUCKET} has been erased."
+else
+  # use the Azure CLI
+  if [ "$AZURE_CLI" -eq 1 ] ; then
+    if az storage container delete --name $BUCKET ; then
+      echo "Bucket (Container) ${BUCKET} has been erased."
+    else
+      echo "Unable to erase the bucket (container) ${BUCKET}." && exit 1
+    fi
   else
-    echo "Unable to erase the bucket ${BUCKET}." && exit 1
-  fi
+  # use the Google API
+    if [ "$GOOGLE_API" -eq 1 ] ; then
+      if gsutil rm -r gs://$BUCKET ; then
+        echo "Bucket (Container) ${BUCKET} has been erased."
+      else
+        echo "Unable to erase the bucket (container) ${BUCKET}." && exit 1
+      fi
+    else
+    # use the S3 API
+      if s3cmd rb --force --recursive s3://$BUCKET ; then
+        echo "Bucket ${BUCKET} has been erased."
+      else
+        echo "Unable to erase the bucket ${BUCKET}." && exit 1
+      fi
+    fi
+  fi  
 fi
 
 
@@ -504,6 +713,3 @@ if ([[ "$OUTPUT_FILE" -ne 0 ]]) ; then
     echo "Unable to append the results of this benchmark run to the output file ${OUTPUT_FILENAME}" && exit 1
   fi
 fi
-
-
-
