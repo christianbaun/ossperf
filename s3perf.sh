@@ -544,12 +544,12 @@ if [ "$PARALLEL" -eq 1 ] ; then
       # Erase files (objects) inside the bucket in parallel
       # The Azure CLI delete in parallel per default and can't use GNU Parallel.
       for i in `az storage blob list --container-name $BUCKET --output table | awk '{print $1}'| sed '1,2d' | sed '/^$/d'` ; do
-		az storage blob delete --name $i --container-name $BUCKET --output table ; done
-		  #echo "Files inside the bucket (container) ${BUCKET} have been erased"
-        #else
-          #echo "Unable to erase the files inside the bucket (container) ${BUCKET}." && exit 1
-        #fi
-	  #done
+	    if az storage blob delete --name $i --container-name $BUCKET >/dev/null ; then
+          echo "Files $i inside the $BUCKET have been erased"
+        else
+          echo "Unable to erase the files $i inside the  $BUCKET." && exit 1
+        fi
+      done
     else
     # use the Google API
       # The Google API delete in parallel per -m and can't use GNU Parallel.
@@ -583,11 +583,11 @@ else
   # use the Azure CLI
     if [ "$AZURE_CLI" -eq 1 ] ; then
       # Erase files (objects) inside the bucket sequentially
-      for file in $DIRECTORY/* ; do
-        if az storage blob delete --container-name $BUCKET --name "$file" ; then
-          echo "Files inside the bucket (container) ${BUCKET} have been erased"
+      for i in `az storage blob list --container-name $BUCKET --output table | awk '{print $1}'| sed '1,2d' | sed '/^$/d'` ; do
+	    if az storage blob delete --name $i --container-name $BUCKET >/dev/null ; then
+          echo "Files $i inside the $BUCKET have been erased"
         else
-          echo "Unable to erase the files inside the bucket (container) ${BUCKET}." && exit 1
+          echo "Unable to erase the files $i inside the  $BUCKET." && exit 1
         fi
       done
     else
