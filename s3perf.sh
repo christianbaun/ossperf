@@ -6,8 +6,8 @@
 # author:       Dr. Christian Baun, Rosa Maria Spanou
 # url:          https://github.com/christianbaun/s3perf
 # license:      GPLv3
-# date:         May 28th 2017
-# version:      1.9
+# date:         August 18th 2017
+# version:      1.91
 # bash_version: 4.3.30(1)-release
 # requires:     md5sum (tested with version 8.23),
 #               bc (tested with version 1.06.95),
@@ -204,6 +204,31 @@ TIME_CREATE_BUCKET_END=`date +%s.%N`
 # The sed command ensures that results < 1 have a leading 0 before the "."
 TIME_CREATE_BUCKET=`echo "scale=3 ; (${TIME_CREATE_BUCKET_END} - ${TIME_CREATE_BUCKET_START})/1" | bc | sed 's/^\./0./'`
 
+# Wait a moment. Sometimes, the services cannot provide fresh created buckets this quick
+sleep 1
+
+# Check that the bucket is really available. Strange things happened with some services in the past...
+
+# use the S3 API
+if [ "$SWIFT_API" -ne 1 ] ; then
+  # We shall check at least 5 times
+  LOOP_VARIABLE=5
+  # until LOOP_VARIABLE is greater than 0 
+  while [ $LOOP_VARIABLE -gt "0" ]; do 
+    # Check if the Bucket is accessible
+    if s3cmd ls s3://$BUCKET ; then
+      echo "The bucket is available."
+      # Skip entire rest of loop.
+      break
+    else
+      echo "The bucket was not yet available!"
+      # Decrement variable
+      LOOP_VARIABLE=$((LOOP_VARIABLE-1))
+      # Wait a moment. 
+      sleep 1
+    fi
+  done
+fi
 
 # Start of the 2nd time measurement
 TIME_OBJECTS_UPLOAD_START=`date +%s.%N`
@@ -394,7 +419,7 @@ if [ "$PARALLEL" -eq 1 ] ; then
   else
   # use the S3 API  
     #  Erase files (objects) inside the bucket in parallel
-    if find $DIRECTORY/*.txt | parallel s3cmd del s3://$BUCKET/{} ; then
+    if find $DIRECTORY/*.txt -type f -printf "%f\n" | parallel s3cmd del s3://$BUCKET/{} ; then
       echo "Files inside the bucket ${BUCKET} have been erased"
     else
       echo "Unable to erase the files inside the bucket ${BUCKET}." && exit 1
