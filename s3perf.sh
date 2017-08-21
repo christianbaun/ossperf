@@ -7,13 +7,15 @@
 # url:          https://github.com/christianbaun/s3perf
 # license:      GPLv3
 # date:         August 18th 2017
-# version:      1.91
+# version:      2.0
 # bash_version: 4.3.30(1)-release
 # requires:     md5sum (tested with version 8.23),
 #               bc (tested with version 1.06.95),
 #               s3cmd (tested with versions 1.5.0 and 1.6.1),
 #               parallel (tested with version 20130922),
-#               swift -- Python client for the Swift API (tested with version 2.3.1)
+#               swift -- Python client for the Swift API (tested with v. 2.3.1)
+#               mc -- Minio Client for the S3 API as replacement for s3cmd
+#                     (tested with v. 2017-06-15T03:38:43Z)
 # notes:        s3cmd need to be configured first via s3cmd --configure
 # example:      ./s3perf.sh -n 5 -s 1048576 # 5 files of 1 MB size each
 # ----------------------------------------------------------------------------
@@ -26,7 +28,7 @@ command -v ping >/dev/null 2>&1 || { echo >&2 "s3perf requires the command line 
 
 function usage
 {
-echo "$SCRIPT -n files -s size [-u] [a] [-k] [-p] [-o]
+echo "$SCRIPT -n files -s size [-u] [-a] [-m] [-k] [-p] [-o]
 
 This script analyzes the performance and data integrity of S3-compatible
 storage services 
@@ -37,6 +39,7 @@ Arguments:
 -s : size of the files to be created in bytes (max 16777216 = 16 MB)
 -u : use upper-case letters for the bucket name (this is required for Nimbus Cumulus and S3ninja)
 -a : use the Swift API and not the S3 API (this requires the python client for the Swift API and the environment variables ST_AUTH, ST_USER and ST_KEY)
+-m : use the S3 API with the Minio Client (mc) instead of s3cmd
 -k : keep the local files and the directory afterwards (do not clean up)
 -p : upload and download the files in parallel
 -o : appended the results to a local file results.csv
@@ -49,13 +52,15 @@ NUM_FILES=
 SIZE_FILES=
 UPPERCASE=0
 SWIFT_API=0
+MINIO_CLIENT=0
+MINIO_CLIENT_ALIAS=
 NOT_CLEAN_UP=0
 PARALLEL=0
 LIST_OF_FILES=
 OUTPUT_FILE=0
 
 
-while getopts "hn:s:uakpo" Arg ; do
+while getopts "hn:s:uam:kpo" Arg ; do
   case $Arg in
     h) usage ;;
     n) NUM_FILES=$OPTARG ;;
@@ -63,6 +68,8 @@ while getopts "hn:s:uakpo" Arg ; do
     # If the flag has been set => $NOT_CLEAN_UP gets value 1
     u) UPPERCASE=1 ;;
     a) SWIFT_API=1 ;;
+    m) MINIO_CLIENT=1 
+       MINIO_CLIENT_ALIAS=$OPTARG ;;
     k) NOT_CLEAN_UP=1 ;;
     p) PARALLEL=1 ;;
     o) OUTPUT_FILE=1 ;;
@@ -79,11 +86,16 @@ if [ "$PARALLEL" -eq 1 ] ; then
   command -v parallel >/dev/null 2>&1 || { echo >&2 "s3perf requires the command line tool parallel. Please install it."; exit 1; }
 fi
 
+if [ "$MINIO_CLIENT" -eq 1 ] ; then
+  # ... the script needs to check, if the command line tool mc is installed
+  command -v mc >/dev/null 2>&1 || { echo -e >&2 "If the Minio Minio Client (mc) shall be used instead of s3cmd, it need to be installed und configured first. Please install it.\nThe installation is well documented here: https://github.com/minio/mc \nThe configuration can be done via this command:\nmc config host add <ALIAS> http://<IP>:<PORT> <ACCESSKEY> <SECRETKEY> S3v4 "; exit 1; }
+fi
+
 # Only if the user wants to use the Swift API and not the S3 API
 if [ "$SWIFT_API" -eq 1 ] ; then
-  # ... the script needs to check, if the command line tool swift installed
+  # ... the script needs to check, if the command line tool swift is installed
   command -v swift >/dev/null 2>&1 || { echo -e >&2 "If the Swift API shall be used, the command line tool swift need to be installed first. Please install it. Probably these commands will install the swift client:\n\cd \$HOME; git clone https://github.com/openstack/python-swiftclient.git\n\cd \$HOME/python-swiftclient; sudo python setup.py develop; cd -."; exit 1; }
-  
+    
   # ... the script needs to check, if the environment variable ST_AUTH is set
   if [ -z "$ST_AUTH" ] ; then
     echo -e "If the Swift API shall be used, the environment variable ST_AUTH must contain the Auth URL of the storage service. Please set it with this command:\nexport ST_AUTH=http://<IP_or_URL>/auth/v1.0" && exit 1
@@ -125,7 +137,11 @@ else
    BUCKET="s3perf-testbucket"
 fi
 
-if ([[ "$NUM_FILES" -eq 0 ]] || [[ "$SIZE_FILES" -eq 0 ]] || [[ "$SIZE_FILES" -gt 16777216 ]]) ; then
+# Validate that...
+# NUM_FILES is not 0 
+# SIZE_FILES is not 0 and not bigger than 16777216
+# MINIO_CLIENT_ALIAS is of non-zero length. Thus remove all space characters
+if ([[ "$NUM_FILES" -eq 0 ]] || [[ "$SIZE_FILES" -eq 0 ]] || [[ "$SIZE_FILES" -gt 16777216 ]] || [[ -z "${MINIO_CLIENT_ALIAS// }" ]]) ; then
    usage
    exit 1
 fi
@@ -186,8 +202,15 @@ if [ "$SWIFT_API" -eq 1 ] ; then
   else
     echo "Unable to create the bucket (container) ${BUCKET}." && exit 1
   fi
+elif [ "$MINIO_CLIENT" -eq 1 ] ; then
+  # use the S3 API with mc
+  if mc mb $MINIO_CLIENT_ALIAS/$BUCKET; then
+    echo "Bucket ${BUCKET} has been created."
+  else
+    echo "Unable to create the bucket ${BUCKET}." && exit 1
+  fi
 else
-  # use the S3 API
+  # use the S3 API with s3cmd
   if s3cmd mb s3://$BUCKET ; then
     echo "Bucket ${BUCKET} has been created."
   else
@@ -209,7 +232,7 @@ sleep 1
 
 # Check that the bucket is really available. Strange things happened with some services in the past...
 
-# use the S3 API
+# use the S3 API with s3cmd
 if [ "$SWIFT_API" -ne 1 ] ; then
   # We shall check at least 5 times
   LOOP_VARIABLE=5
@@ -234,6 +257,7 @@ fi
 TIME_OBJECTS_UPLOAD_START=`date +%s.%N`
 
 
+
 # ------------------------------
 # | Upload the Files (Objects) |
 # ------------------------------
@@ -249,9 +273,17 @@ if [ "$PARALLEL" -eq 1 ] ; then
       echo "Files have been uploaded."
     else
       echo "Unable to upload the files." && exit 1
+    fi    
+  elif [ "$MINIO_CLIENT" -eq 1 ] ; then
+  # use the S3 API with mc
+    # Upload files in parallel
+    if find $DIRECTORY/*.txt | parallel mc cp {} $MINIO_CLIENT_ALIAS/$BUCKET  ; then
+      echo "Files have been uploaded."
+    else
+      echo "Unable to upload the files." && exit 1
     fi
   else
-  # use the S3 API
+  # use the S3 API with s3cmd
     # Upload files in parallel
     if find $DIRECTORY/*.txt | parallel s3cmd put {} s3://$BUCKET ; then
       echo "Files have been uploaded."
@@ -271,8 +303,16 @@ else
     else
       echo "Unable to upload the files." && exit 1
     fi
+  elif [ "$MINIO_CLIENT" -eq 1 ] ; then
+  # use the S3 API with mc
+    # Upload files sequentially
+    if mc cp $DIRECTORY/*.txt $MINIO_CLIENT_ALIAS/$BUCKET ; then
+      echo "Files have been uploaded."
+    else
+      echo "Unable to upload the files." && exit 1
+    fi
   else
-  # use the S3 API
+  # use the S3 API with s3cmd
     # Upload files sequentially
     if s3cmd put $DIRECTORY/*.txt s3://$BUCKET ; then
       echo "Files have been uploaded."
@@ -281,6 +321,7 @@ else
     fi
   fi    
 fi
+
 
 # End of the 2nd time measurement
 TIME_OBJECTS_UPLOAD_END=`date +%s.%N`
@@ -311,8 +352,15 @@ if [ "$SWIFT_API" -eq 1 ] ; then
   else
     echo "Unable to fetch the list of objects inside ${BUCKET}." && exit 1
   fi
+elif [ "$MINIO_CLIENT" -eq 1 ] ; then
+  # use the S3 API with mc
+  if mc ls $MINIO_CLIENT_ALIAS/$BUCKET; then
+    echo "The list of objects inside ${BUCKET} has been fetched."
+  else
+    echo "Unable to fetch the list of objects inside ${BUCKET}." && exit 1
+  fi
 else
-  # use the S3 API
+  # use the S3 API with s3cmd
   if s3cmd ls s3://$BUCKET ; then
     echo "The list of objects inside ${BUCKET} has been fetched."
   else
@@ -341,7 +389,7 @@ TIME_OBJECTS_DOWNLOAD_START=`date +%s.%N`
 if [ "$PARALLEL" -eq 1 ] ; then
   # use the Swift API
   if [ "$SWIFT_API" -eq 1 ] ; then
-    # Upload files in parallel 
+    # Download files in parallel 
     # The swift client can download in parallel (and does so per default) but in order to keep the code simple,
     # s3perf uses the parallel command here too.
     if find $DIRECTORY/*.txt | parallel swift download --object-threads=1 $BUCKET {} ; then
@@ -349,8 +397,16 @@ if [ "$PARALLEL" -eq 1 ] ; then
     else
       echo "Unable to downloaded. the files." && exit 1
     fi
+  elif [ "$MINIO_CLIENT" -eq 1 ] ; then
+  # use the S3 API with mc
+    # Download files in parallel
+    if find $DIRECTORY/*.txt | parallel mc cp $MINIO_CLIENT_ALIAS/$BUCKET/{} $DIRECTORY  ; then
+      echo "Files have been uploaded."
+    else
+      echo "Unable to upload the files." && exit 1
+    fi
   else
-  # use the S3 API
+  # use the S3 API with s3cmd
     # Download files in parallel
     if find ${DIRECTORY}/*.txt -type f -printf "%f\n" | parallel s3cmd get --force s3://$BUCKET/{} $DIRECTORY/ ; then
       echo "Files have been downloaded."
@@ -367,8 +423,22 @@ else
     else
       echo "Unable to download the files." && exit 1
     fi
+  elif [ "$MINIO_CLIENT" -eq 1 ] ; then
+  # use the S3 API with mc
+    # Download files sequentially
+    if mc cp -r $MINIO_CLIENT_ALIAS/$BUCKET $DIRECTORY ; then
+      # mc has up to now not the feature to copy the files directly into the desired folder.
+      # All we can do here is to copy the entire bucket in to the folder as a subfolder and 
+      # later move the files from the subfolder to the desired destination and afterwards 
+      # remove the subfolder.
+      mv $DIRECTORY/$BUCKET/*.txt $DIRECTORY
+      rmdir $DIRECTORY/$BUCKET
+      echo "Files have been downloaded."
+    else
+      echo "Unable to download the files." && exit 1
+    fi
   else
-  # use the S3 API
+  # use the S3 API with s3cmd
     # Download files sequentially
     if s3cmd get --force s3://$BUCKET/*.txt $DIRECTORY/ ; then
       echo "Files have been downloaded."
@@ -377,6 +447,7 @@ else
     fi
   fi
 fi
+
 
 # End of the 4th time measurement
 TIME_OBJECTS_DOWNLOAD_END=`date +%s.%N`
@@ -416,8 +487,17 @@ if [ "$PARALLEL" -eq 1 ] ; then
     else
       echo "Unable to erase the files inside the bucket (container) ${BUCKET}." && exit 1
     fi
+  elif [ "$MINIO_CLIENT" -eq 1 ] ; then
+  # use the S3 API with mc
+    # Erase files (objects) inside the bucket and the bucket itself sequentially!!!
+    # Up to now it is impossible to erase just the files inside a bucket
+    if mc rm -r --force $MINIO_CLIENT_ALIAS/$BUCKET  ; then
+      echo "Files inside the bucket ${BUCKET} have been erased"
+    else
+      echo "Unable to erase the files inside the bucket ${BUCKET}." && exit 1
+    fi
   else
-  # use the S3 API  
+  # use the S3 API with s3cmd
     #  Erase files (objects) inside the bucket in parallel
     if find $DIRECTORY/*.txt -type f -printf "%f\n" | parallel s3cmd del s3://$BUCKET/{} ; then
       echo "Files inside the bucket ${BUCKET} have been erased"
@@ -434,8 +514,17 @@ else
     else
       echo "Unable to erase the files inside the bucket (container) ${BUCKET}." && exit 1
     fi
+  elif [ "$MINIO_CLIENT" -eq 1 ] ; then
+  # use the S3 API with mc
+    # Erase files (objects) inside the bucket and the bucket itself sequentially
+    # Up to now it is impossible to erase just the files inside a bucket
+    if mc rm -r --force $MINIO_CLIENT_ALIAS/$BUCKET  ; then
+      echo "Files inside the bucket ${BUCKET} and the bucket itself have been erased"
+    else
+      echo "Unable to erase the files inside the bucket ${BUCKET}." && exit 1
+    fi
   else
-  # use the S3 API
+  # use the S3 API with s3cmd
     # Erase files (objects) inside the bucket sequentially
     if s3cmd del s3://$BUCKET/* ; then
       echo "Files inside the bucket ${BUCKET} have been erased"
@@ -456,6 +545,20 @@ TIME_ERASE_OBJECTS_END=`date +%s.%N`
 TIME_ERASE_OBJECTS=`echo "scale=3 ; (${TIME_ERASE_OBJECTS_END} - ${TIME_ERASE_OBJECTS_START})/1" | bc | sed 's/^\./0./'`
 
 
+# Create the bucket again in case mc is used, because it is impossible to erase just the objects.
+# We need a bucket to erase it in the next step.
+if [ "$MINIO_CLIENT" -eq 1 ] ; then
+  # use the S3 API with mc
+  if mc mb $MINIO_CLIENT_ALIAS/$BUCKET; then
+    echo "Bucket ${BUCKET} has been created again to erase it as next step."
+    # Wait a moment. Sometimes, the services cannot provide fresh created buckets this quick
+    sleep 1
+  else
+    echo "Unable to create the bucket ${BUCKET} again." && exit 1
+  fi
+fi
+
+
 # Start of the 6th time measurement
 TIME_ERASE_BUCKET_START=`date +%s.%N`
 
@@ -471,8 +574,15 @@ if [ "$SWIFT_API" -eq 1 ] ; then
   else
     echo "Unable to erase the bucket (container) ${BUCKET}." && exit 1
   fi
+elif [ "$MINIO_CLIENT" -eq 1 ] ; then
+  # use the S3 API with mc
+  if mc rm $MINIO_CLIENT_ALIAS/$BUCKET; then
+    echo "Bucket ${BUCKET} has been erased."
+  else
+    echo "Unable to erase the bucket ${BUCKET}." && exit 1
+  fi
 else 
-  # use the S3 API
+  # use the S3 API with s3cmd
   if s3cmd rb s3://$BUCKET ; then
     echo "Bucket ${BUCKET} has been erased."
   else
