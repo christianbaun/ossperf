@@ -6,8 +6,8 @@
 # author:       Dr. Christian Baun, Rosa Maria Spanou
 # url:          https://github.com/christianbaun/s3perf
 # license:      GPLv3
-# date:         August 18th 2017
-# version:      2.0
+# date:         August 21st 2017
+# version:      2.1
 # bash_version: 4.3.30(1)-release
 # requires:     md5sum (tested with version 8.23),
 #               bc (tested with version 1.06.95),
@@ -547,8 +547,31 @@ TIME_ERASE_OBJECTS=`echo "scale=3 ; (${TIME_ERASE_OBJECTS_END} - ${TIME_ERASE_OB
 
 # Create the bucket again in case mc is used, because it is impossible to erase just the objects.
 # We need a bucket to erase it in the next step.
+
+# Check that the bucket is really gone and then create it new. 
+# Strange things happened with some services in the past...
+
+# use the S3 API with mc
 if [ "$MINIO_CLIENT" -eq 1 ] ; then
-  # use the S3 API with mc
+  # We shall check at least 5 times
+  LOOP_VARIABLE=5
+  # until LOOP_VARIABLE is greater than 0 
+  while [ $LOOP_VARIABLE -gt "0" ]; do 
+    # Check if the Bucket is accessible
+    if mc ls $MINIO_CLIENT_ALIAS/$BUCKET ; then
+      echo "The bucket ${BUCKET} is still available, which is quite bad..."
+      # Wait a moment. 
+      sleep 1
+      # Decrement variable
+      LOOP_VARIABLE=$((LOOP_VARIABLE-1))
+    else
+      echo "The bucket ${BUCKET} has been gone!"
+      # Skip entire rest of loop.
+      break    
+    fi
+  done
+  
+  # Create the bucket again in order to erase it inthe next step
   if mc mb $MINIO_CLIENT_ALIAS/$BUCKET; then
     echo "Bucket ${BUCKET} has been created again to erase it as next step."
     # Wait a moment. Sometimes, the services cannot provide fresh created buckets this quick
@@ -557,6 +580,8 @@ if [ "$MINIO_CLIENT" -eq 1 ] ; then
     echo "Unable to create the bucket ${BUCKET} again." && exit 1
   fi
 fi
+
+
 
 
 # Start of the 6th time measurement
