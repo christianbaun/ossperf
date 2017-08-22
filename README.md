@@ -17,7 +17,7 @@ Storage services tested with this tool are so far:
 
 ## Synopsis
 
-    s3perf.sh -n files -s size [-u] [a] [-k] [-p] [-o]
+    s3perf.sh -n files -s size [-u] [-a] [-m <alias>] [-k] [-p] [-o]
 
     Arguments:
     -h : show this message on screen
@@ -25,6 +25,8 @@ Storage services tested with this tool are so far:
     -s : size of the files to be created in bytes (max 16777216 = 16 MB)
     -u : use upper-case letters for the bucket name (this is required for Nimbus Cumulus and S3ninja)
     -a : use the Swift API and not the S3 API (this requires the python client for the Swift API and the environment variables ST_AUTH, ST_USER and ST_KEY)
+    -m : use the S3 API with the Minio Client (mc) instead of s3cmd. 
+         It is required to provide the alias of the mc configuration that shall be used.
     -k : keep the local files and the directory afterwards (do not clean up)
     -p : upload and download the files in parallel
     -o : appended the results to a local file results.csv
@@ -38,6 +40,7 @@ These software packages must be installed on all worker nodes:
 - bc 1.06.95
 - parallel 20130922
 - swift -- Python client for the Swift API (tested with version 2.3.1)
+- mc -- Minio Client for the S3 API as replacement for s3cmd (tested with v. 2017-06-15T03:38:43Z)
 
 ## Example
 
