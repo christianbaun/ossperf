@@ -28,7 +28,7 @@ command -v ping >/dev/null 2>&1 || { echo >&2 "s3perf requires the command line 
 
 function usage
 {
-echo "$SCRIPT -n files -s size [-u] [-a] [-m] [-k] [-p] [-o]
+echo "$SCRIPT -n files -s size [-u] [-a] [-m <alias>] [-k] [-p] [-o]
 
 This script analyzes the performance and data integrity of S3-compatible
 storage services 
@@ -39,7 +39,8 @@ Arguments:
 -s : size of the files to be created in bytes (max 16777216 = 16 MB)
 -u : use upper-case letters for the bucket name (this is required for Nimbus Cumulus and S3ninja)
 -a : use the Swift API and not the S3 API (this requires the python client for the Swift API and the environment variables ST_AUTH, ST_USER and ST_KEY)
--m : use the S3 API with the Minio Client (mc) instead of s3cmd
+-m : use the S3 API with the Minio Client (mc) instead of s3cmd. 
+     It is required to provide the alias of the mc configuration that shall be used.
 -k : keep the local files and the directory afterwards (do not clean up)
 -p : upload and download the files in parallel
 -o : appended the results to a local file results.csv
@@ -231,6 +232,8 @@ TIME_CREATE_BUCKET=`echo "scale=3 ; (${TIME_CREATE_BUCKET_END} - ${TIME_CREATE_B
 sleep 1
 
 # Check that the bucket is really available. Strange things happened with some services in the past...
+
+# !!! This is not part of any time measurements !!!
 
 # use the S3 API with s3cmd
 if [ "$SWIFT_API" -ne 1 ] ; then
@@ -550,6 +553,8 @@ TIME_ERASE_OBJECTS=`echo "scale=3 ; (${TIME_ERASE_OBJECTS_END} - ${TIME_ERASE_OB
 
 # Check that the bucket is really gone and then create it new. 
 # Strange things happened with some services in the past...
+
+# !!! This is not part of any time measurements !!!
 
 # use the S3 API with mc
 if [ "$MINIO_CLIENT" -eq 1 ] ; then
