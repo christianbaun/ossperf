@@ -7,19 +7,19 @@
 # url:          https://github.com/christianbaun/s3perf
 # license:      GPLv3
 # date:         August 27st 2017
-# version:      2.3
+# version:      2.4
 # bash_version: 4.3.30(1)-release
 # requires:     md5sum (tested with version 8.23),
 #               bc (tested with version 1.06.95),
 #               s3cmd (tested with versions 1.5.0, 1.6.1 and 2.0.0),
 #               parallel (tested with version 20130922),
-#               swift -- Python client for the Swift API (tested with version 2.3.1),
-#               mc -- Minio Client for the S3 API as replacement for s3cmd (tested with v. 2017-06-15T03:38:43Z)
-#               az -- Python client for the Azure CLI (tested with version 2.0),
-#               gsutil -- Python client for the Google API (tested with version 4.27)
-#               swift -- Python client for the Swift API (tested with v. 2.3.1)
+#               swift -- Python client for the Swift API (tested with v2.3.1),
+#               mc -- Minio Client for the S3 API as replacement for s3cmd 
+#                     (tested with v2017-06-15T03:38:43Z)
+#               az -- Python client for the Azure CLI (tested with v2.0),
+#               gsutil -- Python client for the Google API (tested with v4.27)
 # notes:        s3cmd need to be configured first via s3cmd --configure
-#				gsutil need to be configured first via gsutil config -a
+#               gsutil need to be configured first via gsutil config -a
 # example:      ./s3perf.sh -n 5 -s 1048576 # 5 files of 1 MB size each
 # ----------------------------------------------------------------------------
 
@@ -44,7 +44,7 @@ Arguments:
 -a : use the Swift API and not the S3 API (this requires the python client for the Swift API and the environment variables ST_AUTH, ST_USER and ST_KEY)
 -m : use the S3 API with the Minio Client (mc) instead of s3cmd. It is required to provide the alias of the mc configuration that shall be used.
 -z : use the Azure CLI instead of the S3 API (this requires the python client for the Azure CLI and the environment variables AZURE_STORAGE_ACCOUNT and AZURE_STORAGE_ACCESS_KEY)
--g : use the Google API instead of the S3 API (this requires the python client for the Google API)
+-g : use the Google Cloud Storage CLI instead of the s3cmd (this requires the python client for the Google API)
 -k : keep the local files and the directory afterwards (do not clean up)
 -p : upload and download the files in parallel
 -o : appended the results to a local file results.csv
@@ -69,7 +69,7 @@ OUTPUT_FILE=0
 RED='\033[0;31m' # Red color
 NC='\033[0m'     # No color
 
-while getopts "hn:s:uamzg:kpo" Arg ; do
+while getopts "hn:s:uamzgkpo" Arg ; do
   case $Arg in
     h) usage ;;
     n) NUM_FILES=$OPTARG ;;
@@ -105,7 +105,7 @@ fi
 # Only if the user wants to use the Swift API and not the S3 API
 if [ "$SWIFT_API" -eq 1 ] ; then
   # ... the script needs to check, if the command line tool swift is installed
-  command -v swift >/dev/null 2>&1 || { echo -e >&2 "If the Swift API shall be used, the command line tool swift need to be installed first. Please install it. Probably these commands will install the swift client:\n\cd \$HOME; git clone https://github.com/openstack/python-swiftclient.git\n\cd \$HOME/python-swiftclient; sudo python setup.py develop; cd -."; exit 1; }
+  command -v swift >/dev/null 2>&1 || { echo -e >&2 "If the Swift API shall be used, the command line tool swift need to be installed first. Please install it. Probably these commands will install the swift client:\ncd \$HOME; git clone https://github.com/openstack/python-swiftclient.git\ncd \$HOME/python-swiftclient; sudo python setup.py develop; cd -."; exit 1; }
 
   # ... the script needs to check, if the environment variable ST_AUTH is set
   if [ -z "$ST_AUTH" ] ; then
@@ -142,7 +142,7 @@ fi
 # Only if the user wants to use the Google API and not the S3 API
 if [ "$GOOGLE_API" -eq 1 ] ; then
   # ... the script needs to check, if the command line tool gsutil installed
-  command -v gsutil >/dev/null 2>&1 || { echo -e >&2 "If the Google API shall be used, the command line tool gsutil need to be installed first. Please install it. Probably these commands will install the gsutil client:\nsudo apt install python-pip; sudo pip install gsutil"; exit 1; }
+  command -v gsutil >/dev/null 2>&1 || { echo -e >&2 "If the Google Cloud Storage CLI shall be used, the command line tool gsutil need to be installed first. Please install it. Probably these commands will install the gsutil client:\nsudo apt install python-pip; sudo pip install gsutil"; exit 1; }
 fi
 
 # Path of the directory for the files
@@ -185,7 +185,7 @@ if ( [[ "$SIZE_FILES" -eq 0 ]] || [[ "$SIZE_FILES" -gt 16777216 ]] ) ; then
    usage
    exit 1
 fi
- ||
+ 
  
 
 # Check if we have a working network connection by sending a ping to 8.8.8.8
