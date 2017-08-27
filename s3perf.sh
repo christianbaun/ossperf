@@ -14,9 +14,9 @@
 #               s3cmd (tested with versions 1.5.0, 1.6.1 and 2.0.0),
 #               parallel (tested with version 20130922),
 #               swift -- Python client for the Swift API (tested with version 2.3.1),
-#				mc -- Minio Client for the S3 API as replacement for s3cmd (tested with v. 2017-06-15T03:38:43Z)
-#				az -- Python client for the Azure CLI (tested with version 2.0),
-#				gsutil -- Python client for the Google API (tested with version 4.27)
+#               mc -- Minio Client for the S3 API as replacement for s3cmd (tested with v. 2017-06-15T03:38:43Z)
+#               az -- Python client for the Azure CLI (tested with version 2.0),
+#               gsutil -- Python client for the Google API (tested with version 4.27)
 #               swift -- Python client for the Swift API (tested with v. 2.3.1)
 # notes:        s3cmd need to be configured first via s3cmd --configure
 #				gsutil need to be configured first via gsutil config -a
