@@ -25,8 +25,8 @@ Storage services tested with this tool are so far:
     -n : number of files to be created
     -s : size of the files to be created in bytes (max 16777216 = 16 MB)
     -u : use upper-case letters for the bucket name (this is required for Nimbus Cumulus and S3ninja)
-    -m : use the S3 API with the Minio Client (mc) instead of s3cmd. It is required to provide the alias of the mc configuration that shall be used.
     -a : use the Swift API and not the S3 API (this requires the python client for the Swift API and the environment variables ST_AUTH, ST_USER and ST_KEY)
+    -m : use the S3 API with the Minio Client (mc) instead of s3cmd. It is required to provide the alias of the mc configuration that shall be used.
     -z : use the Azure CLI instead of the S3 API (this requires the python client for the Azure CLI and the environment variables AZURE_STORAGE_ACCOUNT and AZURE_STORAGE_ACCESS_KEY)
 	-g : use the Google API instead of the S3 API (this requires the python client for the Google API)
     -k : keep the local files and the directory afterwards (do not clean up)
