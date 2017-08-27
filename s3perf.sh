@@ -7,11 +7,11 @@
 # url:          https://github.com/christianbaun/s3perf
 # license:      GPLv3
 # date:         August 27st 2017
-# version:      2.2
+# version:      2.3
 # bash_version: 4.3.30(1)-release
 # requires:     md5sum (tested with version 8.23),
 #               bc (tested with version 1.06.95),
-#               s3cmd (tested with versions 1.5.0 and 1.6.1 and 2.0.0),
+#               s3cmd (tested with versions 1.5.0, 1.6.1 and 2.0.0),
 #               parallel (tested with version 20130922),
 #               swift -- Python client for the Swift API (tested with version 2.3.1),
 #				mc -- Minio Client for the S3 API as replacement for s3cmd (tested with v. 2017-06-15T03:38:43Z)
@@ -66,6 +66,8 @@ PARALLEL=0
 LIST_OF_FILES=
 OUTPUT_FILE=0
 
+RED='\033[0;31m' # Red color
+NC='\033[0m'     # No color
 
 while getopts "hn:s:uamzg:kpo" Arg ; do
   case $Arg in
@@ -170,12 +172,21 @@ fi
 
 # Validate that...
 # NUM_FILES is not 0 
-# SIZE_FILES is not 0 and not bigger than 16777216
-# MINIO_CLIENT_ALIAS is of non-zero length. Thus remove all space characters
-if ([[ "$NUM_FILES" -eq 0 ]] || [[ "$SIZE_FILES" -eq 0 ]] || [[ "$SIZE_FILES" -gt 16777216 ]] || [[ -z "${MINIO_CLIENT_ALIAS// }" ]]) ; then
+if ( [[ "$NUM_FILES" -eq 0 ]] ) ; then
+   echo -e "${RED}Attention: The number of files must not be value zero!${NC}"
    usage
    exit 1
 fi
+
+# Validate that...
+# SIZE_FILES is not 0 and not bigger than 16777216
+if ( [[ "$SIZE_FILES" -eq 0 ]] || [[ "$SIZE_FILES" -gt 16777216 ]] ) ; then
+   echo -e "${RED}Attention: The size of the file(s) must not 0 and the maximum size is 16.777.216 Byte!${NC}"
+   usage
+   exit 1
+fi
+ ||
+ 
 
 # Check if we have a working network connection by sending a ping to 8.8.8.8
 if ping -q -c 1 -W 1 8.8.8.8 >/dev/null ; then
@@ -413,6 +424,15 @@ TIME_OBJECTS_UPLOAD_END=`date +%s.%N`
 TIME_OBJECTS_UPLOAD=`echo "scale=3 ; (${TIME_OBJECTS_UPLOAD_END} - ${TIME_OBJECTS_UPLOAD_START})/1" | bc | sed 's/^\./0./'`
 
 
+# Calculate the bandwidth
+# ((Size of the objects * number of objects * 8 bits per byte) / TIME_OBJECTS_UPLOAD) and next
+# convert to Megabit per second
+# The "/1" is stupid, but it is required to get the "scale" working.
+# Otherwise the "scale" is just ignored
+# The sed command ensures that results < 1 have a leading 0 before the "."
+BANDWIDTH_OBJECTS_UPLOAD=`echo "scale=3 ; ((((${SIZE_FILES} * ${NUM_FILES} * 8) / ${TIME_OBJECTS_UPLOAD}) / 1000) / 1000) / 1" | bc | sed 's/^\./0./'`
+
+
 # Wait a moment. Sometimes, the services cannot provide fresh uploaded files this quick
 sleep 1
 
@@ -594,6 +614,15 @@ else
 fi
 
 
+# Calculate the bandwidth
+# ((Size of the objects * number of objects * 8 bits per byte) / TIME_OBJECTS_DOWNLOAD) and next
+# convert to Megabit per second
+# The "/1" is stupid, but it is required to get the "scale" working.
+# Otherwise the "scale" is just ignored
+# The sed command ensures that results < 1 have a leading 0 before the "."
+BANDWIDTH_OBJECTS_DOWNLOAD=`echo "scale=3 ; ((((${SIZE_FILES} * ${NUM_FILES} * 8) / ${TIME_OBJECTS_DOWNLOAD}) / 1000) / 1000) / 1" | bc | sed 's/^\./0./'`
+
+
 # Start of the 5th time measurement
 TIME_ERASE_OBJECTS_START=`date +%s.%N`
 
@@ -720,10 +749,11 @@ TIME_ERASE_OBJECTS=`echo "scale=3 ; (${TIME_ERASE_OBJECTS_END} - ${TIME_ERASE_OB
 if [ "$MINIO_CLIENT" -eq 1 ] ; then
   # We shall check at least 5 times
   LOOP_VARIABLE=5
+  echo "Check again that the ${BUCKET} is gone."
   # until LOOP_VARIABLE is greater than 0 
   while [ $LOOP_VARIABLE -gt "0" ]; do 
     # Check if the Bucket is accessible
-    if mc ls $MINIO_CLIENT_ALIAS/$BUCKET ; then
+    if mc ls $MINIO_CLIENT_ALIAS/$BUCKET > /dev/null 2>&1 ; then
       echo "The bucket ${BUCKET} is still available, which is quite bad..."
       # Wait a moment. 
       sleep 1
@@ -811,30 +841,33 @@ if [ "$NOT_CLEAN_UP" -ne 1 ] ; then
   fi
 fi
 
-echo 'Required time to create the bucket:                 '${TIME_CREATE_BUCKET}s
-echo 'Required time to upload the files:                  '${TIME_OBJECTS_UPLOAD}s
-echo 'Required time to fetch a list of files:             '${TIME_OBJECTS_LIST}s
-echo 'Required time to download the files:                '${TIME_OBJECTS_DOWNLOAD}s
-echo 'Required time to erase the objects:                 '${TIME_ERASE_OBJECTS}s
-echo 'Required time to erase the bucket:                  '${TIME_ERASE_BUCKET}s
+echo 'Required time to create the bucket:                 '${TIME_CREATE_BUCKET} s
+echo 'Required time to upload the files:                  '${TIME_OBJECTS_UPLOAD} s
+echo 'Required time to fetch a list of files:             '${TIME_OBJECTS_LIST} s
+echo 'Required time to download the files:                '${TIME_OBJECTS_DOWNLOAD} s
+echo 'Required time to erase the objects:                 '${TIME_ERASE_OBJECTS} s
+echo 'Required time to erase the bucket:                  '${TIME_ERASE_BUCKET} s
 
 TIME_SUM=`echo "scale=3 ; (${TIME_CREATE_BUCKET} + ${TIME_OBJECTS_UPLOAD} + ${TIME_OBJECTS_LIST} + ${TIME_OBJECTS_DOWNLOAD} + ${TIME_ERASE_OBJECTS} + ${TIME_ERASE_BUCKET})/1" | bc | sed 's/^\./0./'`
 
-echo 'Required time to perform all S3-related operations: '${TIME_SUM}s
+echo 'Required time to perform all S3-related operations: '${TIME_SUM} s
+echo ''
+echo 'Bandwidth during the upload of the files:           '${BANDWIDTH_OBJECTS_UPLOAD} Mbps
+echo 'Bandwidth during the download of the files:         '${BANDWIDTH_OBJECTS_DOWNLOAD} Mbps
 
 # Create an output file only of the command line parameter was set => value of OUTPUT_FILE is not equal 0
 if ([[ "$OUTPUT_FILE" -ne 0 ]]) ; then
   # If the output file did not already exist...
   if [ ! -f ${OUTPUT_FILENAME} ] ; then  
     # .. create in the first line the header first
-    if echo -e "DATE TIME NUM_FILES SIZE_FILES TIME_CREATE_BUCKET TIME_OBJECTS_UPLOAD TIME_OBJECTS_LIST TIME_OBJECTS_DOWNLOAD TIME_ERASE_OBJECTS TIME_ERASE_BUCKET TIME_SUM" >> ${OUTPUT_FILENAME} ; then
+    if echo -e "DATE TIME NUM_FILES SIZE_FILES TIME_CREATE_BUCKET TIME_OBJECTS_UPLOAD TIME_OBJECTS_LIST TIME_OBJECTS_DOWNLOAD TIME_ERASE_OBJECTS TIME_ERASE_BUCKET TIME_SUM BANDWIDTH_OBJECTS_UPLOAD BANDWIDTH_OBJECTS_DOWNLOAD" >> ${OUTPUT_FILENAME} ; then
       echo "A new output file ${OUTPUT_FILENAME} has been created."
     else
       echo "Unable to create a new output file ${OUTPUT_FILENAME}" && exit 1
     fi
   fi
   # If the output file did already exist...
-  if echo -e "`date +%Y-%m-%d` `date +%H:%M:%S` ${NUM_FILES} ${SIZE_FILES} ${TIME_CREATE_BUCKET} ${TIME_OBJECTS_UPLOAD} ${TIME_OBJECTS_LIST} ${TIME_OBJECTS_DOWNLOAD} ${TIME_ERASE_OBJECTS} ${TIME_ERASE_BUCKET} ${TIME_SUM}" >> ${OUTPUT_FILENAME} ; then
+  if echo -e "`date +%Y-%m-%d` `date +%H:%M:%S` ${NUM_FILES} ${SIZE_FILES} ${TIME_CREATE_BUCKET} ${TIME_OBJECTS_UPLOAD} ${TIME_OBJECTS_LIST} ${TIME_OBJECTS_DOWNLOAD} ${TIME_ERASE_OBJECTS} ${TIME_ERASE_BUCKET} ${TIME_SUM} ${BANDWIDTH_OBJECTS_UPLOAD} ${BANDWIDTH_OBJECTS_DOWNLOAD}" >> ${OUTPUT_FILENAME} ; then
     echo "The results of this benchmark run have been appended to the output file ${OUTPUT_FILENAME}"
   else
     echo "Unable to append the results of this benchmark run to the output file ${OUTPUT_FILENAME}" && exit 1
