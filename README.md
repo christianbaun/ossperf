@@ -5,6 +5,7 @@ s3perf is a lightweight command line tool for analyzing the performance and data
 Storage services tested with this tool are so far:
 - [Amazon Simple Storage Service (S3)](https://aws.amazon.com/s3/)
 - [Google Cloud Storage (GCS)](https://cloud.google.com/storage/)
+- [Azure Blob Storage (ABS)](https://azure.microsoft.com/de-de/services/storage/blobs/)
 - [Nimbus Cumulus](https://github.com/nimbusproject/nimbus)
 - [Minio](https://github.com/minio/minio)
 - [S3ninja](https://github.com/scireum/s3ninja/)
@@ -17,7 +18,7 @@ Storage services tested with this tool are so far:
 
 ## Synopsis
 
-    s3perf.sh -n files -s size [-u] [-a] [-m <alias>] [-k] [-p] [-o]
+    s3perf.sh -n files -s size [-u] [-a] [-m <alias>] [-z] [-g] [-k] [-p] [-o]
 
     Arguments:
     -h : show this message on screen
@@ -25,8 +26,9 @@ Storage services tested with this tool are so far:
     -s : size of the files to be created in bytes (max 16777216 = 16 MB)
     -u : use upper-case letters for the bucket name (this is required for Nimbus Cumulus and S3ninja)
     -a : use the Swift API and not the S3 API (this requires the python client for the Swift API and the environment variables ST_AUTH, ST_USER and ST_KEY)
-    -m : use the S3 API with the Minio Client (mc) instead of s3cmd. 
-         It is required to provide the alias of the mc configuration that shall be used.
+    -m : use the S3 API with the Minio Client (mc) instead of s3cmd. It is required to provide the alias of the mc configuration that shall be used.
+    -z : use the Azure CLI instead of the S3 API (this requires the python client for the Azure CLI and the environment variables AZURE_STORAGE_ACCOUNT and AZURE_STORAGE_ACCESS_KEY)
+	-g : use the Google API instead of the S3 API (this requires the python client for the Google API)
     -k : keep the local files and the directory afterwards (do not clean up)
     -p : upload and download the files in parallel
     -o : appended the results to a local file results.csv
@@ -36,11 +38,13 @@ Storage services tested with this tool are so far:
 These software packages must be installed on all worker nodes:
 
 - bash 4.3.30
-- s3cmd 1.6.1
+- s3cmd 1.6.1, 2.0.0
 - bc 1.06.95
 - parallel 20130922
 - swift -- Python client for the Swift API (tested with version 2.3.1)
 - mc -- Minio Client for the S3 API as replacement for s3cmd (tested with v. 2017-06-15T03:38:43Z)
+- az -- Python client for the Azure CLI (tested with version 2.0)
+- gsutil -- Python client for the Google API (tested with version 4.27)
 
 ## Example
 
