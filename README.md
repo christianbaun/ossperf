@@ -38,14 +38,14 @@ Storage services tested with this tool are so far:
 
 These software packages must be installed on all worker nodes:
 
-- bash 4.3.30
-- s3cmd 1.5.0, 1.6.1 and 2.0.0
-- bc 1.06.95
-- parallel 20130922
-- swift -- Python client for the Swift API (tested with version 2.3.1)
-- mc -- Minio Client for the S3 API as replacement for s3cmd (tested with version 2017-06-15T03:38:43Z)
-- az -- Python client for the Azure CLI (tested with version 2.0)
-- gsutil -- Python client for the Google Cloud Storage as replacement for s3cmd (tested with version 4.27)
+- [bash](https://www.gnu.org/software/bash/) 4.3.30
+- [s3cmd](https://github.com/s3tools/s3cmd) 1.5.0, 1.6.1 and 2.0.0
+- [bc](https://www.gnu.org/software/bc/) 1.06.95
+- [parallel](https://www.gnu.org/software/parallel/) 20130922
+- [swift](https://github.com/openstack/python-swiftclient) -- Python client for the Swift API (tested with version 2.3.1)
+- [mc](https://github.com/minio/mc) -- Minio Client for the S3 API as replacement for s3cmd (tested with version 2017-06-15T03:38:43Z)
+- [az](https://github.com/Azure/azure-cli) -- Python client for the Azure CLI (tested with version 2.0)
+- [gsutil](https://github.com/GoogleCloudPlatform/gsutil) -- Python client for the Google Cloud Storage as replacement for s3cmd (tested with version 4.27)
 
 ## Example
 
