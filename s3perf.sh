@@ -6,8 +6,8 @@
 # author:       Dr. Christian Baun, Rosa Maria Spanou, Marius Wernicke
 # url:          https://github.com/christianbaun/s3perf
 # license:      GPLv3
-# date:         August 27st 2017
-# version:      2.4
+# date:         August 29th 2017
+# version:      2.5
 # bash_version: 4.3.30(1)-release
 # requires:     md5sum (tested with version 8.23),
 #               bc (tested with version 1.06.95),
@@ -31,7 +31,7 @@ command -v ping >/dev/null 2>&1 || { echo >&2 "s3perf requires the command line 
 
 function usage
 {
-echo "$SCRIPT -n files -s size [-u] [-a] [-m <alias>] [-z] [-g] [-k] [-p] [-o]
+echo "$SCRIPT -n files -s size [-b <bucket>] [-u] [-a] [-m <alias>] [-z] [-g] [-k] [-p] [-o]
 
 This script analyzes the performance and data integrity of S3-compatible
 storage services 
@@ -40,9 +40,10 @@ Arguments:
 -h : show this message on screen
 -n : number of files to be created
 -s : size of the files to be created in bytes (max 16777216 = 16 MB)
+-b : s3perf will create per default a new bucket s3perf-testbucket (or S3PERF-TESTBUCKET, in case the argument -u is set). This is not a problem when private cloud deployments are investigated, but for public cloud scenarios it may become a problem, because object-based stoage services implement a global bucket namespace. This means that all bucket names must be unique. With the argument -b <bucket> the users of s3perf have the freedom to specify the bucket name
 -u : use upper-case letters for the bucket name (this is required for Nimbus Cumulus and S3ninja)
 -a : use the Swift API and not the S3 API (this requires the python client for the Swift API and the environment variables ST_AUTH, ST_USER and ST_KEY)
--m : use the S3 API with the Minio Client (mc) instead of s3cmd. It is required to provide the alias of the mc configuration that shall be used.
+-m : use the S3 API with the Minio Client (mc) instead of s3cmd. It is required to provide the alias of the mc configuration that shall be used
 -z : use the Azure CLI instead of the S3 API (this requires the python client for the Azure CLI and the environment variables AZURE_STORAGE_ACCOUNT and AZURE_STORAGE_ACCESS_KEY)
 -g : use the Google Cloud Storage CLI instead of the s3cmd (this requires the python client for the Google API)
 -k : keep the local files and the directory afterwards (do not clean up)
@@ -55,6 +56,7 @@ exit 0
 SCRIPT=${0##*/}   # script name
 NUM_FILES=
 SIZE_FILES=
+BUCKETNAME_PARAMETER=0
 UPPERCASE=0
 SWIFT_API=0
 MINIO_CLIENT=0
@@ -66,15 +68,21 @@ PARALLEL=0
 LIST_OF_FILES=
 OUTPUT_FILE=0
 
-RED='\033[0;31m' # Red color
-NC='\033[0m'     # No color
+RED='\033[0;31m'          # Red color
+NC='\033[0m'              # No color
+GREEN='\033[0;32m'        # Green color
+YELLOW='\033[0;33m'       # Yellow color
+BLUE='\033[0;34m'         # Blue color
+WHITE='\033[0;37m'        # White color
 
-while getopts "hn:s:uamzgkpo" Arg ; do
+while getopts "hn:s:b:uamzgkpo" Arg ; do
   case $Arg in
     h) usage ;;
     n) NUM_FILES=$OPTARG ;;
     s) SIZE_FILES=$OPTARG ;;
     # If the flag has been set => $NOT_CLEAN_UP gets value 1
+    b) BUCKETNAME_PARAMETER=1
+       BUCKET=$OPTARG ;; 
     u) UPPERCASE=1 ;;
     a) SWIFT_API=1 ;;
     m) MINIO_CLIENT=1 
@@ -164,18 +172,23 @@ DIRECTORY="testfiles"
 # Filename of the output file
 OUTPUT_FILENAME=results.csv
 
-if [[ "UPPERCASE" -eq 1 ]] ; then
-   BUCKET="S3PERF-TESTBUCKET"
-else
-   BUCKET="s3perf-testbucket"
+# If the user did not want to specify the bucket name with the parameter -b <bucket>, s3perf will use the default bucket name
+if [ "$BUCKETNAME_PARAMETER" -eq 0 ] ; then
+  if [ "$UPPERCASE" -eq 1 ] ; then
+    # Default bucket name in case the parameter -u was set => $UPPERCASE has value 1
+    BUCKET="S3PERF-TESTBUCKET"
+  else
+    # Default bucket name in case the parameter -u was not set => $UPPERCASE has value 0
+    BUCKET="s3perf-testbucket"
+  fi
 fi
 
 # Validate that...
 # NUM_FILES is not 0 
-if ( [[ "$NUM_FILES" -eq 0 ]] ) ; then
-   echo -e "${RED}Attention: The number of files must not be value zero!${NC}"
-   usage
-   exit 1
+if [ "$NUM_FILES" -eq 0 ] ; then
+  echo -e "${RED}Attention: The number of files must not be value zero!${NC}"
+  usage
+  exit 1
 fi
 
 # Validate that...
@@ -190,22 +203,22 @@ fi
 
 # Check if we have a working network connection by sending a ping to 8.8.8.8
 if ping -q -c 1 -W 1 8.8.8.8 >/dev/null ; then
-  echo "This computer has a working internet connection."
+  echo -e "${GREEN}[OK] This computer has a working internet connection.${NC}"
 else
-  echo "This computer has no working internet connection. Please check your network settings." && exit 1
+  echo -e "${RED}[ERROR] This computer has no working internet connection. Please check your network settings.${NC}" && exit 1
 fi
 
 # Check if the directory already exists
 # This is not a part of the benchmark!
 if [ -e ${DIRECTORY} ] ; then
   # Terminate the script, in case the directory already exists
-  echo "The directory ${DIRECTORY} already exists!" && exit 1
+  echo -e "${RED}[ERROR] The directory ${DIRECTORY} already exists in the local directory!${NC}" && exit 1
 else
   if mkdir ${DIRECTORY} ; then
     # Create the directory if it does not already exist
-    echo "The directory ${DIRECTORY} has been created."
+    echo -e "${GREEN}[OK] The directory ${DIRECTORY} has been created in the local directory.${NC}"
   else
-    echo "Unable to create the directory ${DIRECTORY}" && exit 1
+    echo -e "${RED}[ERROR] Unable to create the directory ${DIRECTORY} in the local directory.${NC}" && exit 1
   fi
 fi
 
@@ -214,18 +227,18 @@ fi
 for ((i=1; i<=${NUM_FILES}; i+=1))
 do
   if dd if=/dev/urandom of=$DIRECTORY/s3perf-testfile$i.txt bs=1 count=$SIZE_FILES ; then
-    echo "Files with random content have been created."
+    echo -e "${GREEN}[OK] Files with random content have been created.${NC}"
   else
-    echo "Unable to create the files." && exit 1
+    echo -e "${RED}[ERROR] Unable to create the files.${NC}" && exit 1
   fi
 done
 
 # Calculate the checksums of the files
 # This is not a part of the benchmark!
 if md5sum $DIRECTORY/* > $DIRECTORY/MD5SUM ; then
-  echo "Checksums have been calculated and MD5SUM file has been created."
+  echo -e "${GREEN}[OK] Checksums have been calculated and MD5SUM file has been created.${NC}"
 else
-  echo "Unable to calculate the checksums and create the MD5SUM file." && exit 1
+  echo -e "${RED}[ERROR] Unable to calculate the checksums and create the MD5SUM file.${NC}" && exit 1
 fi
 
 
