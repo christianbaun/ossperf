@@ -6,8 +6,8 @@
 # author:       Dr. Christian Baun, Rosa Maria Spanou, Marius Wernicke
 # url:          https://github.com/christianbaun/s3perf
 # license:      GPLv3
-# date:         August 29th 2017
-# version:      2.6
+# date:         August 30th 2017
+# version:      2.7
 # bash_version: 4.3.30(1)-release
 # requires:     md5sum (tested with version 8.23),
 #               bc (tested with version 1.06.95),
@@ -200,13 +200,29 @@ if ( [[ "$SIZE_FILES" -eq 0 ]] || [[ "$SIZE_FILES" -gt 16777216 ]] ) ; then
 fi
  
  
+# We shall check at least 5 times
+LOOP_VARIABLE=5  
+#until LOOP_VARIABLE is greater than 0 
+while [ $LOOP_VARIABLE -gt "0" ]; do 
+  # Check if we have a working network connection by sending a ping to 8.8.8.8
+  if ping -q -c 1 -W 1 8.8.8.8 >/dev/null ; then
+    echo -e "${GREEN}[OK] This computer has a working internet connection.${NC}"
+    # Skip entire rest of loop.
+    break
+  else
+    echo -e "${YELLOW}[INFO] The internet connection is not working now. Will check again.${NC}"
+    # Decrement variable
+    LOOP_VARIABLE=$((LOOP_VARIABLE-1))
+    if [ "LOOP_VARIABLE" -eq 0 ] ; then
+      echo -e "${RED}[ERROR] This computer has no working internet connection. Please check your network settings.${NC}" && exit 1
+    fi
+    # Wait a moment. 
+    sleep 1
+  fi
+done
 
-# Check if we have a working network connection by sending a ping to 8.8.8.8
-if ping -q -c 1 -W 1 8.8.8.8 >/dev/null ; then
-  echo -e "${GREEN}[OK] This computer has a working internet connection.${NC}"
-else
-  echo -e "${RED}[ERROR] This computer has no working internet connection. Please check your network settings.${NC}" && exit 1
-fi
+
+
 
 # Check if the directory already exists
 # This is not a part of the benchmark!
@@ -227,9 +243,9 @@ fi
 for ((i=1; i<=${NUM_FILES}; i+=1))
 do
   if dd if=/dev/urandom of=$DIRECTORY/s3perf-testfile$i.txt bs=1 count=$SIZE_FILES ; then
-    echo -e "${GREEN}[OK] Files with random content have been created.${NC}"
+    echo -e "${GREEN}[OK] File with random content has been created.${NC}"
   else
-    echo -e "${RED}[ERROR] Unable to create the files.${NC}" && exit 1
+    echo -e "${RED}[ERROR] Unable to create the file.${NC}" && exit 1
   fi
 done
 
