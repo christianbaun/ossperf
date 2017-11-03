@@ -1,13 +1,13 @@
 #!/bin/bash
 #
-# title:        s3perf.sh
+# title:        ossperf.sh
 # description:  This script analyzes the performance and data integrity of 
 #               S3-compatible storage services 
 # author:       Dr. Christian Baun, Rosa Maria Spanou, Marius Wernicke
-# url:          https://github.com/christianbaun/s3perf
+# url:          https://github.com/christianbaun/ossperf
 # license:      GPLv3
-# date:         August 30th 2017
-# version:      2.7
+# date:         November 3rd 2017
+# version:      3.0
 # bash_version: 4.3.30(1)-release
 # requires:     md5sum (tested with version 8.23),
 #               bc (tested with version 1.06.95),
@@ -20,14 +20,14 @@
 #               gsutil -- Python client for the Google API (tested with v4.27)
 # notes:        s3cmd need to be configured first via s3cmd --configure
 #               gsutil need to be configured first via gsutil config -a
-# example:      ./s3perf.sh -n 5 -s 1048576 # 5 files of 1 MB size each
+# example:      ./ossperf.sh -n 5 -s 1048576 # 5 files of 1 MB size each
 # ----------------------------------------------------------------------------
 
 # Check if the required command line tools are available
-command -v s3cmd >/dev/null 2>&1 || { echo >&2 "s3perf requires the command line tool s3cmd. Please install it."; exit 1; }
-command -v bc >/dev/null 2>&1 || { echo >&2 "s3perf requires the command line tool bc. Please install it."; exit 1; }
-command -v md5sum >/dev/null 2>&1 || { echo >&2 "s3perf requires the command line tool md5sum. Please install it."; exit 1; }
-command -v ping >/dev/null 2>&1 || { echo >&2 "s3perf requires the command line tool ping Please install it."; exit 1; }
+command -v s3cmd >/dev/null 2>&1 || { echo >&2 "ossperf requires the command line tool s3cmd. Please install it."; exit 1; }
+command -v bc >/dev/null 2>&1 || { echo >&2 "ossperf requires the command line tool bc. Please install it."; exit 1; }
+command -v md5sum >/dev/null 2>&1 || { echo >&2 "ossperf requires the command line tool md5sum. Please install it."; exit 1; }
+command -v ping >/dev/null 2>&1 || { echo >&2 "ossperf requires the command line tool ping Please install it."; exit 1; }
 
 function usage
 {
@@ -40,7 +40,7 @@ Arguments:
 -h : show this message on screen
 -n : number of files to be created
 -s : size of the files to be created in bytes (max 16777216 = 16 MB)
--b : s3perf will create per default a new bucket s3perf-testbucket (or S3PERF-TESTBUCKET, in case the argument -u is set). This is not a problem when private cloud deployments are investigated, but for public cloud scenarios it may become a problem, because object-based stoage services implement a global bucket namespace. This means that all bucket names must be unique. With the argument -b <bucket> the users of s3perf have the freedom to specify the bucket name
+-b : ossperf will create per default a new bucket ossperf-testbucket (or OSSPERF-TESTBUCKET, in case the argument -u is set). This is not a problem when private cloud deployments are investigated, but for public cloud scenarios it may become a problem, because object-based stoage services implement a global bucket namespace. This means that all bucket names must be unique. With the argument -b <bucket> the users of ossperf have the freedom to specify the bucket name
 -u : use upper-case letters for the bucket name (this is required for Nimbus Cumulus and S3ninja)
 -a : use the Swift API and not the S3 API (this requires the python client for the Swift API and the environment variables ST_AUTH, ST_USER and ST_KEY)
 -m : use the S3 API with the Minio Client (mc) instead of s3cmd. It is required to provide the alias of the mc configuration that shall be used
@@ -102,7 +102,7 @@ done
 # Only if the user wants to execute the upload and dowload of the files in parallel...
 if [ "$PARALLEL" -eq 1 ] ; then
   # ... the script needs to check, if the command line tool GNU parallel is installed
-  command -v parallel >/dev/null 2>&1 || { echo >&2 "s3perf requires the command line tool parallel. Please install it."; exit 1; }
+  command -v parallel >/dev/null 2>&1 || { echo >&2 "ossperf requires the command line tool parallel. Please install it."; exit 1; }
 fi
 
 if [ "$MINIO_CLIENT" -eq 1 ] ; then
@@ -172,14 +172,14 @@ DIRECTORY="testfiles"
 # Filename of the output file
 OUTPUT_FILENAME=results.csv
 
-# If the user did not want to specify the bucket name with the parameter -b <bucket>, s3perf will use the default bucket name
+# If the user did not want to specify the bucket name with the parameter -b <bucket>, ossperf will use the default bucket name
 if [ "$BUCKETNAME_PARAMETER" -eq 0 ] ; then
   if [ "$UPPERCASE" -eq 1 ] ; then
     # Default bucket name in case the parameter -u was set => $UPPERCASE has value 1
-    BUCKET="S3PERF-TESTBUCKET"
+    BUCKET="OSSPERF-TESTBUCKET"
   else
     # Default bucket name in case the parameter -u was not set => $UPPERCASE has value 0
-    BUCKET="s3perf-testbucket"
+    BUCKET="ossperf-testbucket"
   fi
 fi
 
@@ -242,7 +242,7 @@ fi
 # This is not a part of the benchmark!
 for ((i=1; i<=${NUM_FILES}; i+=1))
 do
-  if dd if=/dev/urandom of=$DIRECTORY/s3perf-testfile$i.txt bs=1 count=$SIZE_FILES ; then
+  if dd if=/dev/urandom of=$DIRECTORY/ossperf-testfile$i.txt bs=1 count=$SIZE_FILES ; then
     echo -e "${GREEN}[OK] File with random content has been created.${NC}"
   else
     echo -e "${RED}[ERROR] Unable to create the file.${NC}" && exit 1
@@ -354,7 +354,7 @@ if [ "$PARALLEL" -eq 1 ] ; then
   if [ "$SWIFT_API" -eq 1 ] ; then
     # Upload files in parallel
     # The swift client can upload in parallel (and does so per default) but in order to keep the code simple,
-    # s3perf uses the parallel command here too.
+    # ossperf uses the parallel command here too.
     if find $DIRECTORY/*.txt | parallel swift upload --object-threads 1 $BUCKET {} ; then
       echo -e "${GREEN}[OK] Files have been uploaded.${NC}"
     else
@@ -401,7 +401,7 @@ else
   if [ "$SWIFT_API" -eq 1 ] ; then
     # Upload files sequentially
     # The swift client can upload in parallel (and does so per default) but in order to keep the code simple,
-    # s3perf uses the parallel command here too.
+    # ossperf uses the parallel command here too.
     if swift upload --object-threads 1 $BUCKET $DIRECTORY/*.txt ; then
       echo -e "${GREEN}[OK] Files have been uploaded.${NC}"
     else
@@ -533,7 +533,7 @@ if [ "$PARALLEL" -eq 1 ] ; then
   if [ "$SWIFT_API" -eq 1 ] ; then
     # Download files in parallel 
     # The swift client can download in parallel (and does so per default) but in order to keep the code simple,
-    # s3perf uses the parallel command here too.
+    # ossperf uses the parallel command here too.
     if find $DIRECTORY/*.txt | parallel swift download --object-threads=1 $BUCKET {} ; then
       echo -e "${GREEN}[OK] Files have been downloaded.${NC}"
     else
@@ -665,7 +665,7 @@ if [ "$PARALLEL" -eq 1 ] ; then
   if [ "$SWIFT_API" -eq 1 ] ; then
     # Erase files (objects) inside the bucket in parallel 
     # The swift client can erase in parallel (and does so per default) but in order to keep the code simple,
-    # s3perf uses the parallel command here too.
+    # ossperf uses the parallel command here too.
     if find $DIRECTORY/*.txt | parallel swift delete --object-threads=1 $BUCKET {} ; then
       echo -e "${GREEN}[OK] Files inside the bucket (container) ${BUCKET} have been erased.${NC}"
     else

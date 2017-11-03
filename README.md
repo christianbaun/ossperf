@@ -1,6 +1,8 @@
-# s3perf
+# OSSperf
 
-s3perf is a lightweight command line tool for analyzing the performance and data integrity of storage services which implement the S3 API or the alternatively the Swift API. The tool creates a user defined number of files with random content and of a specified size inside a local directory. The tool creates a bucket, uploads and downloads the files and afterwards removes the bucket. The time, required to carry out theses S3/Swift-related tasks is measured and printed out on command line. 
+OSSperf is a lightweight command line tool for analyzing the performance and data integrity of storage services which implement the S3 API, the Swift API or the Azure Blob Storage API. The tool creates a user defined number of files with random content and of a specified size inside a local directory. The tool creates a bucket, uploads and downloads the files and afterwards removes the bucket. The time, required to carry out theses S3/Swift/Azure-related tasks is measured and printed out on command line. 
+
+Until November 2017, the OSSperf tool had the name S3perf because initially, the tool had only implemented support for storage services, which implement the S3 API. Because now, the solution targets also storage services that implement different APIs, the tool was renamed to OSSperf. OSS stands here for Object Storage Services.
 
 Storage services tested with this tool are so far:
 - [Amazon Simple Storage Service (S3)](https://aws.amazon.com/s3/)
@@ -18,13 +20,13 @@ Storage services tested with this tool are so far:
 
 ## Synopsis
 
-    s3perf.sh -n files -s size [-b <bucket>] [-u] [-a] [-m <alias>] [-z] [-g] [-k] [-p] [-o]
+    ossperf.sh -n files -s size [-b <bucket>] [-u] [-a] [-m <alias>] [-z] [-g] [-k] [-p] [-o]
 
     Arguments:
     -h : show this message on screen
     -n : number of files to be created
     -s : size of the files to be created in bytes (max 16777216 = 16 MB)
-    -b : s3perf will create per default a new bucket s3perf-testbucket (or S3PERF-TESTBUCKET, in case the argument -u is set). This is not a problem when private cloud deployments are investigated, but for public cloud scenarios it may become a problem, because object-based stoage services implement a global bucket namespace. This means that all bucket names must be unique. With the argument -b <bucket> the users of s3perf have the freedom to specify the bucket name
+    -b : ossperf will create per default a new bucket ossperf-testbucket (or OSSPERF-TESTBUCKET, in case the argument -u is set). This is not a problem when private cloud deployments are investigated, but for public cloud scenarios it may become a problem, because object-based stoage services implement a global bucket namespace. This means that all bucket names must be unique. With the argument -b <bucket> the users of ossperf have the freedom to specify the bucket name
     -u : use upper-case letters for the bucket name (this is required for Nimbus Cumulus and S3ninja)
     -a : use the Swift API and not the S3 API (this requires the python client for the Swift API and the environment variables ST_AUTH, ST_USER and ST_KEY)
     -m : use the S3 API with the Minio Client (mc) instead of s3cmd. It is required to provide the alias of the mc configuration that shall be used
@@ -49,9 +51,9 @@ These software packages must be installed on all worker nodes:
 
 ## Example
 
-This command will create five files of size 1 MB each and use them to test the performance and data integrity of the storage service. The new bucket used will have the name s3perf-testbucket and the the uploads and the downloads will be carried out in parallel.
+This command will create five files of size 1 MB each and use them to test the performance and data integrity of the storage service. The new bucket used will have the name ossperf-testbucket and the the uploads and the downloads will be carried out in parallel.
 
-`./s3perf.sh -n 5 -s 1048576 -b s3perf-testbucket -p`
+`./ossperf.sh -n 5 -s 1048576 -b ossperf-testbucket -p`
 
 ## Related Work
 
@@ -67,11 +69,11 @@ Some interesting papers and software projects focusing the performance evaluatio
 
 ## Web Site
 
-Visit the s3perf web page for more information and the latest revision.
+Visit the ossperf web page for more information and the latest revision.
 
-[https://github.com/christianbaun/s3perf](https://github.com/christianbaun/s3perf)
+[https://github.com/christianbaun/ossperf](https://github.com/christianbaun/ossperf)
 
-Some further information provides the [Wiki](https://github.com/christianbaun/s3perf/wiki)
+Some further information provides the [Wiki](https://github.com/christianbaun/ossperf/wiki)
 
 ## License
 
