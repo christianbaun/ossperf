@@ -19,7 +19,7 @@ Storage services tested with this tool are so far:
 
 ## Publications
 
-- [**OSSperf - a lightweight solution for the performance evaluation of object-based cloud storage services**](https://journalofcloudcomputing.springeropen.com/articles/10.1186/s13677-017-0096-x). *Christian Baun, Henry-Norbert Cocos and Rosa-Maria Spanou. Journal of Cloud ComputingAdvances, Systems and Applications 2017 6:24 ([PDF](https://journalofcloudcomputing.springeropen.com/track/pdf/10.1186/s13677-017-0096-x))
+- [**OSSperf - a lightweight solution for the performance evaluation of object-based cloud storage services**](https://journalofcloudcomputing.springeropen.com/articles/10.1186/s13677-017-0096-x). *Christian Baun, Henry-Norbert Cocos and Rosa-Maria Spanou*. Journal of Cloud ComputingAdvances, Systems and Applications 2017 6:24 ([PDF](https://journalofcloudcomputing.springeropen.com/track/pdf/10.1186/s13677-017-0096-x))
 
 ## Synopsis
 
