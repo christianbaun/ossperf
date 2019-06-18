@@ -6,8 +6,8 @@
 # author:       Dr. Christian Baun, Rosa Maria Spanou, Marius Wernicke
 # url:          https://github.com/christianbaun/ossperf
 # license:      GPLv3
-# date:         November 3rd 2017
-# version:      3.0
+# date:         June 18th 2019
+# version:      3.1
 # bash_version: 4.3.30(1)-release
 # requires:     md5sum (tested with version 8.23),
 #               bc (tested with version 1.06.95),
@@ -40,7 +40,7 @@ Arguments:
 -h : show this message on screen
 -n : number of files to be created
 -s : size of the files to be created in bytes (max 16777216 = 16 MB)
--b : ossperf will create per default a new bucket ossperf-testbucket (or OSSPERF-TESTBUCKET, in case the argument -u is set). This is not a problem when private cloud deployments are investigated, but for public cloud scenarios it may become a problem, because object-based stoage services implement a global bucket namespace. This means that all bucket names must be unique. With the argument -b <bucket> the users of ossperf have the freedom to specify the bucket name
+-b : ossperf will create per default a new bucket ossperf-testbucket (or OSSPERF-TESTBUCKET, in case the argument -u is set). This is not a problem when private cloud deployments are investigated, but for public cloud scenarios it may become a problem, because object-based storage services implement a global bucket namespace. This means that all bucket names must be unique. With the argument -b <bucket> the users of ossperf have the freedom to specify the bucket name
 -u : use upper-case letters for the bucket name (this is required for Nimbus Cumulus and S3ninja)
 -a : use the Swift API and not the S3 API (this requires the python client for the Swift API and the environment variables ST_AUTH, ST_USER and ST_KEY)
 -m : use the S3 API with the Minio Client (mc) instead of s3cmd. It is required to provide the alias of the mc configuration that shall be used
@@ -75,7 +75,7 @@ YELLOW='\033[0;33m'       # Yellow color
 BLUE='\033[0;34m'         # Blue color
 WHITE='\033[0;37m'        # White color
 
-while getopts "hn:s:b:uamzgkpo" Arg ; do
+while getopts "hn:s:b:uam:zgkpo" Arg ; do
   case $Arg in
     h) usage ;;
     n) NUM_FILES=$OPTARG ;;
@@ -264,7 +264,7 @@ TIME_CREATE_BUCKET_START=`date +%s.%N`
 # -------------------------------
 # | Create a bucket / container |
 # -------------------------------
-# In the Swift and Azure ecosystem, the buckets are called conainers. 
+# In the Swift and Azure ecosystem, the buckets are called containers. 
 
 # use the Swift API
 if [ "$SWIFT_API" -eq 1 ] ; then
@@ -471,7 +471,7 @@ TIME_OBJECTS_LIST_START=`date +%s.%N`
 # ----------------------------------------
 # | List files inside bucket / container |
 # ----------------------------------------
-# In the Swift and Azure ecosystem, the buckets are called conainers. 
+# In the Swift and Azure ecosystem, the buckets are called containers. 
 
 # use the Swift API
 if [ "$SWIFT_API" -eq 1 ] ; then
@@ -532,9 +532,10 @@ if [ "$PARALLEL" -eq 1 ] ; then
   # use the Swift API
   if [ "$SWIFT_API" -eq 1 ] ; then
     # Download files in parallel 
-    # The swift client can download in parallel (and does so per default) but in order to keep the code simple,
-    # ossperf uses the parallel command here too.
-    if find $DIRECTORY/*.txt | parallel swift download --object-threads=1 $BUCKET {} ; then
+    # The swift client can download in parallel (and does so per default) but 
+    # in order to keep the code simple, ossperf uses the parallel command here too.
+    # This removes the subfolder name(s) in the output of find: -type f -printf  "%f\n"
+    if find $DIRECTORY/*.txt -type f -printf  "%f\n" | parallel swift download --object-threads=1 $BUCKET {} ; then
       echo -e "${GREEN}[OK] Files have been downloaded.${NC}"
     else
       echo -e "${RED}[ERROR] Unable to downloaded. the files.${NC}" && exit 1
@@ -542,7 +543,8 @@ if [ "$PARALLEL" -eq 1 ] ; then
   elif [ "$MINIO_CLIENT" -eq 1 ] ; then
   # use the S3 API with mc
     # Download files in parallel
-    if find $DIRECTORY/*.txt | parallel mc cp $MINIO_CLIENT_ALIAS/$BUCKET/{} $DIRECTORY  ; then
+    # This removes the subfolder name(s) in the output of find: -type f -printf  "%f\n"
+    if find $DIRECTORY/*.txt -type f -printf  "%f\n" | parallel mc cp $MINIO_CLIENT_ALIAS/$BUCKET/{} $DIRECTORY  ; then
       echo -e "${GREEN}[OK] Files have been downloaded.${NC}"
     else
       echo -e "${RED}[ERROR] Unable to upload the files.${NC}" && exit 1
@@ -568,6 +570,7 @@ if [ "$PARALLEL" -eq 1 ] ; then
   else
   # use the S3 API with s3cmd
     # Download files in parallel
+    # This removes the subfolder name(s) in the output of find: -type f -printf  "%f\n"
     if find ${DIRECTORY}/*.txt -type f -printf "%f\n" | parallel s3cmd get --force s3://$BUCKET/{} $DIRECTORY/ ; then
       echo -e "${GREEN}[OK] Files have been downloaded.${NC}"
     else
@@ -795,7 +798,7 @@ if [ "$MINIO_CLIENT" -eq 1 ] ; then
     fi
   done
   
-  # Create the bucket again in order to erase it inthe next step
+  # Create the bucket again in order to erase it in the next step
   if mc mb $MINIO_CLIENT_ALIAS/$BUCKET; then
     echo -e "${GREEN}[OK] Bucket ${BUCKET} has been created again to erase it as next step.${NC}"
     # Wait a moment. Sometimes, the services cannot provide fresh created buckets this quick
@@ -812,7 +815,7 @@ TIME_ERASE_BUCKET_START=`date +%s.%N`
 # ----------------------------
 # | Erase bucket / container |
 # ----------------------------
-# In the Swift and Azure ecosystem, the buckets are called conainers. 
+# In the Swift and Azure ecosystem, the buckets are called containers. 
 
 # use the Swift API
 if [ "$SWIFT_API" -eq 1 ] ; then
