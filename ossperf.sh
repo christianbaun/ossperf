@@ -7,11 +7,11 @@
 # url:          https://github.com/christianbaun/ossperf
 # license:      GPLv3
 # date:         June 18th 2019
-# version:      3.1
+# version:      3.11
 # bash_version: 4.3.30(1)-release
 # requires:     md5sum (tested with version 8.23),
 #               bc (tested with version 1.06.95),
-#               s3cmd (tested with versions 1.5.0, 1.6.1 and 2.0.0),
+#               s3cmd (tested with versions 1.5.0, 1.6.1 and 2.0.2),
 #               parallel (tested with version 20130922),
 #               swift -- Python client for the Swift API (tested with v2.3.1),
 #               mc -- Minio Client for the S3 API as replacement for s3cmd 
