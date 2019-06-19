@@ -7,7 +7,7 @@
 # url:          https://github.com/christianbaun/ossperf
 # license:      GPLv3
 # date:         June 19th 2019
-# version:      3.12
+# version:      3.13
 # bash_version: 4.4.12(1)-release
 # requires:     md5sum (tested with version 8.23),
 #               bc (tested with version 1.06.95),
@@ -22,12 +22,6 @@
 #               gsutil need to be configured first via gsutil config -a
 # example:      ./ossperf.sh -n 5 -s 1048576 # 5 files of 1 MB size each
 # ----------------------------------------------------------------------------
-
-# Check if the required command line tools are available
-command -v s3cmd >/dev/null 2>&1 || { echo >&2 "ossperf requires the command line tool s3cmd. Please install it."; exit 1; }
-command -v bc >/dev/null 2>&1 || { echo >&2 "ossperf requires the command line tool bc. Please install it."; exit 1; }
-command -v md5sum >/dev/null 2>&1 || { echo >&2 "ossperf requires the command line tool md5sum. Please install it."; exit 1; }
-command -v ping >/dev/null 2>&1 || { echo >&2 "ossperf requires the command line tool ping Please install it."; exit 1; }
 
 function usage
 {
@@ -99,6 +93,39 @@ while getopts "hn:s:b:uam:zgkpo" Arg ; do
 done
 
 
+# Check if the required command line tools are available
+if ! [ -x "$(command -v s3cmd)" ]; then
+    echo -e "${RED}[ERROR] ossperf requires the command line tool s3cmd. Please install it.${NC}"
+    exit 1
+else
+    echo -e "${YELLOW}[INFO] The tool s3cmd has been found on this system.${NC}"
+    s3cmd --version
+fi
+
+if ! [ -x "$(command -v bc)" ]; then
+    echo -e "${RED}[ERROR] ossperf requires the command line tool bc. Please install it.${NC}"
+    exit 1
+else
+    echo -e "${YELLOW}[INFO] The tool bc has been found on this system.${NC}"
+    bc --version | head -n 1
+fi
+
+if ! [ -x "$(command -v md5sum)" ]; then
+    echo -e "${RED}[ERROR] ossperf requires the command line tool md5sum. Please install it.${NC}"
+    exit 1
+else
+    echo -e "${YELLOW}[INFO] The tool md5sum has been found on this system.${NC}"
+    md5sum --version | head -n 1
+fi
+
+if ! [ -x "$(command -v ping)" ]; then
+    echo -e "${RED}[ERROR] ossperf requires the command line tool ping. Please install it.${NC}"
+    exit 1
+else
+    echo -e "${YELLOW}[INFO] The tool ping has been found on this system.${NC}"
+    ping -V
+fi
+
 # Only if the user wants to execute the upload and dowload of the files in parallel...
 if [ "$PARALLEL" -eq 1 ] ; then
   # ... the script needs to check, if the command line tool GNU parallel is installed
@@ -124,15 +151,15 @@ fi
 
 # Only if the user wants to use the Swift API and not the S3 API
 if [ "$SWIFT_API" -eq 1 ] ; then
+
   # ... the script needs to check, if the command line tool swift is installed
   if ! [ -x "$(command -v swift)" ]; then
     echo -e "${RED}[ERROR] If the Swift API shall be used, the command line tool swift need to be installed first. Please install it. Probably these commands will install the swift client:${NC}\ncd \$HOME; git clone https://github.com/openstack/python-swiftclient.git\ncd \$HOME/python-swiftclient; sudo python setup.py develop; cd -."
     exit 1
   else
     echo -e "${YELLOW}[INFO] The swift client has been found on this system.${NC}"
-    mc version | grep Version 
+    # !!! Missing: Print out the version information of the swift client !!!
   fi
-fi
 
   # ... the script needs to check, if the environment variable ST_AUTH is set
   if [ -z "$ST_AUTH" ] ; then
@@ -169,7 +196,7 @@ fi
 # Only if the user wants to use the Google API and not the S3 API
 if [ "$GOOGLE_API" -eq 1 ] ; then
   # ... the script needs to check, if the command line tool gsutil installed
-  command -v gsutil >/dev/null 2>&1 || { echo -e "${RED}[ERROR] If the Google Cloud Storage CLI shall be used, the command line tool gsutil need to be installed first. Please install it. Probably these commands will install the gsutil client:${NC}\nsudo apt install python-pip; sudo pip install gsutil" && exit 1
+  command -v gsutil >/dev/null 2>&1 || { echo -e "${RED}[ERROR] If the Google Cloud Storage CLI shall be used, the command line tool gsutil need to be installed first. Please install it. Probably these commands will install the gsutil client:${NC}\nsudo apt install python-pip; sudo pip install gsutil"; exit 1; }
 fi
 
 # Path of the directory for the files
