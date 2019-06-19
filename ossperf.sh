@@ -6,13 +6,13 @@
 # author:       Dr. Christian Baun, Rosa Maria Spanou, Marius Wernicke
 # url:          https://github.com/christianbaun/ossperf
 # license:      GPLv3
-# date:         June 18th 2019
-# version:      3.11
-# bash_version: 4.3.30(1)-release
+# date:         June 19th 2019
+# version:      3.12
+# bash_version: 4.4.12(1)-release
 # requires:     md5sum (tested with version 8.23),
 #               bc (tested with version 1.06.95),
 #               s3cmd (tested with versions 1.5.0, 1.6.1 and 2.0.2),
-#               parallel (tested with version 20130922),
+#               parallel (tested with version 20161222),
 #               swift -- Python client for the Swift API (tested with v2.3.1),
 #               mc -- Minio Client for the S3 API as replacement for s3cmd 
 #                     (tested with v2017-06-15T03:38:43Z)
@@ -102,55 +102,74 @@ done
 # Only if the user wants to execute the upload and dowload of the files in parallel...
 if [ "$PARALLEL" -eq 1 ] ; then
   # ... the script needs to check, if the command line tool GNU parallel is installed
-  command -v parallel >/dev/null 2>&1 || { echo >&2 "ossperf requires the command line tool parallel. Please install it."; exit 1; }
+  if ! [ -x "$(command -v parallel)" ]; then
+    echo -e "${RED}[ERROR] ossperf requires the command line tool parallel. Please install it.${NC}"
+    exit 1
+  else
+    echo -e "${YELLOW}[INFO] The tool GNU parallel has been found on this system.${NC}"
+    parallel --version | head -n 1
+  fi
 fi
 
 if [ "$MINIO_CLIENT" -eq 1 ] ; then
-  # ... the script needs to check, if the command line tool mc is installed
-  command -v mc >/dev/null 2>&1 || { echo -e >&2 "If the Minio Minio Client (mc) shall be used instead of s3cmd, it need to be installed und configured first. Please install it.\nThe installation is well documented here: https://github.com/minio/mc \nThe configuration can be done via this command:\nmc config host add <ALIAS> http://<IP>:<PORT> <ACCESSKEY> <SECRETKEY> S3v4 "; exit 1; }
+# ... the script needs to check, if the command line tool mc is installed
+  if ! [ -x "$(command -v mc)" ]; then
+    echo -e "${RED}[ERROR] If the Minio Client (mc) shall be used instead of s3cmd, it need to be installed and configured first. Please install it.\nThe installation is well documented here:${NC} https://github.com/minio/mc \nThe configuration can be done via this command:\nmc config host add <ALIAS> http://<IP>:<PORT> <ACCESSKEY> <SECRETKEY> S3v4"
+    exit 1
+  else
+    echo -e "${YELLOW}[INFO] The Minio Client (mc) has been found on this system.${NC}"
+    mc version | grep Version 
+  fi
 fi
 
 # Only if the user wants to use the Swift API and not the S3 API
 if [ "$SWIFT_API" -eq 1 ] ; then
   # ... the script needs to check, if the command line tool swift is installed
-  command -v swift >/dev/null 2>&1 || { echo -e >&2 "If the Swift API shall be used, the command line tool swift need to be installed first. Please install it. Probably these commands will install the swift client:\ncd \$HOME; git clone https://github.com/openstack/python-swiftclient.git\ncd \$HOME/python-swiftclient; sudo python setup.py develop; cd -."; exit 1; }
+  if ! [ -x "$(command -v swift)" ]; then
+    echo -e "${RED}[ERROR] If the Swift API shall be used, the command line tool swift need to be installed first. Please install it. Probably these commands will install the swift client:${NC}\ncd \$HOME; git clone https://github.com/openstack/python-swiftclient.git\ncd \$HOME/python-swiftclient; sudo python setup.py develop; cd -."
+    exit 1
+  else
+    echo -e "${YELLOW}[INFO] The swift client has been found on this system.${NC}"
+    mc version | grep Version 
+  fi
+fi
 
   # ... the script needs to check, if the environment variable ST_AUTH is set
   if [ -z "$ST_AUTH" ] ; then
-    echo -e "If the Swift API shall be used, the environment variable ST_AUTH must contain the Auth URL of the storage service. Please set it with this command:\nexport ST_AUTH=http://<IP_or_URL>/auth/v1.0" && exit 1
+    echo -e "${RED}[ERROR] If the Swift API shall be used, the environment variable ST_AUTH must contain the Auth URL of the storage service. Please set it with this command:${NC}\nexport ST_AUTH=http://<IP_or_URL>/auth/v1.0" && exit 1
   fi
   
   # ... the script needs to check, if the environment variable ST_USER is set
   if [ -z "$ST_USER" ] ; then
-    echo -e "If the Swift API shall be used, the environment variable ST_USER must contain the Username of the storage service. Please set it with this command:\nexport ST_USER=<username>" && exit 1
+    echo -e "${RED}[ERROR] If the Swift API shall be used, the environment variable ST_USER must contain the Username of the storage service. Please set it with this command:${NC}\nexport ST_USER=<username>" && exit 1
   fi
   
   # ... the script needs to check, if the environment variable ST_KEY is set
   if [ -z "$ST_KEY" ] ; then
-    echo -e "If the Swift API shall be used, the environment variable ST_KEY must contain the Password of the storage service. Please set it with this command:\nexport ST_KEY=<password>" && exit 1
+    echo -e "${RED}[ERROR] If the Swift API shall be used, the environment variable ST_KEY must contain the Password of the storage service. Please set it with this command:${NC}\nexport ST_KEY=<password>" && exit 1
   fi
 fi
 
 # Only if the user wants to use the Azure CLI and not the S3 API
 if [ "$AZURE_CLI" -eq 1 ] ; then
   # ... the script needs to check, if the command line tool az installed
-  command -v az >/dev/null 2>&1 || { echo -e >&2 "If the Azure CLI shall be used, the command line tool az need to be installed first. Please install it. Probably these commands will install the az client:\ncd $HOME; curl -L https://aka.ms/InstallAzureCli | bash; exec -l $SHELL"; exit 1; }
+  command -v az >/dev/null 2>&1 || { echo -e "${RED}[ERROR] If the Azure CLI shall be used, the command line tool az need to be installed first. Please install it. Probably these commands will install the az client:${NC}\ncd $HOME; curl -L https://aka.ms/InstallAzureCli | bash; exec -l $SHELL"; exit 1; }
   
   # ... the script needs to check, if the environment variable AZURE_STORAGE_ACCOUNT is set
   if [ -z "$AZURE_STORAGE_ACCOUNT" ] ; then
-    echo -e "If the Azure CLI shall be used, the environment variable AZURE_STORAGE_ACCOUNT must contain the Storage Account Name of the storage service. Please set it with this command:\nexport AZURE_STORAGE_ACCOUNT=<storage_account_name>" && exit 1
+    echo -e "${RED}[ERROR] If the Azure CLI shall be used, the environment variable AZURE_STORAGE_ACCOUNT must contain the Storage Account Name of the storage service. Please set it with this command:${NC}\nexport AZURE_STORAGE_ACCOUNT=<storage_account_name>" && exit 1
   fi
   
   # ... the script needs to check, if the environment variable AZURE_STORAGE_ACCESS_KEY is set
   if [ -z "$AZURE_STORAGE_ACCESS_KEY" ] ; then
-    echo -e "If the Azure CLI shall be used, the environment variable AZURE_STORAGE_ACCESS_KEY must contain the Account Key of the storage service. Please set it with this command:\nexport AZURE_STORAGE_ACCESS_KEY=<storage_account_key>" && exit 1
+    echo -e "${RED}[ERROR] If the Azure CLI shall be used, the environment variable AZURE_STORAGE_ACCESS_KEY must contain the Account Key of the storage service. Please set it with this command:${NC}\nexport AZURE_STORAGE_ACCESS_KEY=<storage_account_key>" && exit 1
   fi
 fi
 
 # Only if the user wants to use the Google API and not the S3 API
 if [ "$GOOGLE_API" -eq 1 ] ; then
   # ... the script needs to check, if the command line tool gsutil installed
-  command -v gsutil >/dev/null 2>&1 || { echo -e >&2 "If the Google Cloud Storage CLI shall be used, the command line tool gsutil need to be installed first. Please install it. Probably these commands will install the gsutil client:\nsudo apt install python-pip; sudo pip install gsutil"; exit 1; }
+  command -v gsutil >/dev/null 2>&1 || { echo -e "${RED}[ERROR] If the Google Cloud Storage CLI shall be used, the command line tool gsutil need to be installed first. Please install it. Probably these commands will install the gsutil client:${NC}\nsudo apt install python-pip; sudo pip install gsutil" && exit 1
 fi
 
 # Path of the directory for the files
@@ -186,7 +205,7 @@ fi
 # Validate that...
 # NUM_FILES is not 0 
 if [ "$NUM_FILES" -eq 0 ] ; then
-  echo -e "${RED}Attention: The number of files must not be value zero!${NC}"
+  echo -e "${RED}[ERROR] Attention: The number of files must not be value zero!${NC}"
   usage
   exit 1
 fi
@@ -194,7 +213,7 @@ fi
 # Validate that...
 # SIZE_FILES is not 0 and not bigger than 16777216
 if ( [[ "$SIZE_FILES" -eq 0 ]] || [[ "$SIZE_FILES" -gt 16777216 ]] ) ; then
-   echo -e "${RED}Attention: The size of the file(s) must not 0 and the maximum size is 16.777.216 Byte!${NC}"
+   echo -e "${RED}[ERROR] Attention: The size of the file(s) must not 0 and the maximum size is 16.777.216 Byte!${NC}"
    usage
    exit 1
 fi
@@ -213,7 +232,7 @@ while [ $LOOP_VARIABLE -gt "0" ]; do
     echo -e "${YELLOW}[INFO] The internet connection is not working now. Will check again.${NC}"
     # Decrement variable
     LOOP_VARIABLE=$((LOOP_VARIABLE-1))
-    if [ "LOOP_VARIABLE" -eq 0 ] ; then
+    if [ "$LOOP_VARIABLE" -eq 0 ] ; then
       echo -e "${RED}[ERROR] This computer has no working internet connection. Please check your network settings.${NC}" && exit 1
     fi
     # Wait a moment. 

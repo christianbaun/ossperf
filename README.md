@@ -2,7 +2,7 @@
 
 OSSperf is a lightweight command line tool for analyzing the performance and data integrity of storage services which implement the S3 API, the Swift API or the Azure Blob Storage API. The tool creates a user defined number of files with random content and of a specified size inside a local directory. The tool creates a bucket, uploads and downloads the files and afterwards removes the bucket. The time, required to carry out theses S3/Swift/Azure-related tasks is measured and printed out on command line. 
 
-Until November 2017, the OSSperf tool had the name S3perf because initially, the tool had only implemented support for storage services, which implement the S3 API. Because now, the solution targets also storage services that implement different APIs, the tool was renamed to OSSperf. OSS stands for Object-based Storage Services.
+Until November 2019, the OSSperf tool had the name S3perf because initially, the tool had only implemented support for storage services, which implement the S3 API. Because now, the solution targets also storage services that implement different APIs, the tool was renamed to OSSperf. OSS stands for Object-based Storage Services.
 
 Storage services tested with this tool are so far:
 - [Amazon Simple Storage Service (S3)](https://aws.amazon.com/s3/)
@@ -44,9 +44,9 @@ Storage services tested with this tool are so far:
 These software packages must be installed on all worker nodes:
 
 - [bash](https://www.gnu.org/software/bash/) 4.3.30
-- [s3cmd](https://github.com/s3tools/s3cmd) 1.5.0, 1.6.1 and 2.0.0
+- [s3cmd](https://github.com/s3tools/s3cmd) 1.5.0, 1.6.1 and 2.0.2
 - [bc](https://www.gnu.org/software/bc/) 1.06.95
-- [parallel](https://www.gnu.org/software/parallel/) 20130922
+- [parallel](https://www.gnu.org/software/parallel/) 20161222
 - [swift](https://github.com/openstack/python-swiftclient) -- Python client for the Swift API (tested with version 2.3.1)
 - [mc](https://github.com/minio/mc) -- Minio Client for the S3 API as replacement for s3cmd (tested with version 2017-06-15T03:38:43Z)
 - [az](https://github.com/Azure/azure-cli) -- Python client for the Azure CLI (tested with version 2.0)
