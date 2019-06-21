@@ -6,10 +6,10 @@
 # author:       Dr. Christian Baun, Rosa Maria Spanou, Marius Wernicke
 # url:          https://github.com/christianbaun/ossperf
 # license:      GPLv3
-# date:         June 19th 2019
-# version:      3.13
+# date:         June 21th 2019
+# version:      3.2
 # bash_version: 4.4.12(1)-release
-# requires:     md5sum (tested with version 8.23),
+# requires:     md5sum (tested with version 8.26),
 #               bc (tested with version 1.06.95),
 #               s3cmd (tested with versions 1.5.0, 1.6.1 and 2.0.2),
 #               parallel (tested with version 20161222),
@@ -17,7 +17,7 @@
 #               mc -- Minio Client for the S3 API as replacement for s3cmd 
 #                     (tested with v2017-06-15T03:38:43Z)
 #               az -- Python client for the Azure CLI (tested with v2.0),
-#               gsutil -- Python client for the Google API (tested with v4.27)
+#               gsutil -- Python client for the Google API (tested with v4.27 and 4.38)
 # notes:        s3cmd need to be configured first via s3cmd --configure
 #               gsutil need to be configured first via gsutil config -a
 # example:      ./ossperf.sh -n 5 -s 1048576 # 5 files of 1 MB size each
@@ -47,6 +47,19 @@ Arguments:
 exit 0
 }
 
+function box_out()
+# https://unix.stackexchange.com/questions/70615/bash-script-echo-output-in-box
+{
+  local s="$*"
+  tput setaf 3
+  echo " -${s//?/-}-
+| ${s//?/ } |
+| $(tput setaf 4)$s$(tput setaf 3) |
+| ${s//?/ } |
+ -${s//?/-}-"
+  tput sgr 0
+}
+
 SCRIPT=${0##*/}   # script name
 NUM_FILES=
 SIZE_FILES=
@@ -61,6 +74,7 @@ NOT_CLEAN_UP=0
 PARALLEL=0
 LIST_OF_FILES=
 OUTPUT_FILE=0
+S3PERF_CLIENT=0
 
 RED='\033[0;31m'          # Red color
 NC='\033[0m'              # No color
@@ -69,28 +83,37 @@ YELLOW='\033[0;33m'       # Yellow color
 BLUE='\033[0;34m'         # Blue color
 WHITE='\033[0;37m'        # White color
 
-while getopts "hn:s:b:uam:zgkpo" Arg ; do
-  case $Arg in
+while getopts "hn:s:b:uam:zgkpo" ARG ; do
+  case $ARG in
     h) usage ;;
-    n) NUM_FILES=$OPTARG ;;
-    s) SIZE_FILES=$OPTARG ;;
+    n) NUM_FILES=${OPTARG} ;;
+    s) SIZE_FILES=${OPTARG} ;;
     # If the flag has been set => $NOT_CLEAN_UP gets value 1
     b) BUCKETNAME_PARAMETER=1
-       BUCKET=$OPTARG ;; 
+       BUCKET=${OPTARG} ;; 
     u) UPPERCASE=1 ;;
     a) SWIFT_API=1 ;;
     m) MINIO_CLIENT=1 
-       MINIO_CLIENT_ALIAS=$OPTARG ;;
+       MINIO_CLIENT_ALIAS=${OPTARG} ;;
     z) AZURE_CLI=1 ;;
     g) GOOGLE_API=1 ;;
     k) NOT_CLEAN_UP=1 ;;
     p) PARALLEL=1 ;;
     o) OUTPUT_FILE=1 ;;
-    \?) echo "Invalid option: $OPTARG" >&2
+    *) echo -e "${RED}[ERROR] Invalid option! ${OPTARG} ${NC}" 
        exit 1
        ;;
   esac
 done
+
+
+# If neither using the Swift client, the Minio client (mc), the Azure client (az) 
+# or the Google storage client (gsutil) has been specified via command line parameter...
+if ( [[ "$MINIO_CLIENT" -ne 1 ]] || [[ "$AZURE_CLI" -ne 1 ]] || [[ "$GOOGLE_API" -ne 1 ]] || [[ "$SWIFT_API" -ne 1 ]]) ; then
+   # ... then we use the command line client s3cmd. This is the default client of ossperf
+   S3PERF_CLIENT=1
+   echo -e "${YELLOW}[INFO] ossperf will use the tool s3cmd because no other client tool has been specified via command line parameter.${NC}"
+fi
 
 
 # Check if the required command line tools are available
@@ -246,6 +269,10 @@ if ( [[ "$SIZE_FILES" -eq 0 ]] || [[ "$SIZE_FILES" -gt 16777216 ]] ) ; then
 fi
  
  
+# ----------------------------------------------------
+# | Check that we have a working internet connection |
+# ----------------------------------------------------
+# This is not a part of the benchmark!
 # We shall check at least 5 times
 LOOP_VARIABLE=5  
 #until LOOP_VARIABLE is greater than 0 
@@ -266,8 +293,6 @@ while [ $LOOP_VARIABLE -gt "0" ]; do
     sleep 1
   fi
 done
-
-
 
 
 # Check if the directory already exists
@@ -311,6 +336,8 @@ TIME_CREATE_BUCKET_START=`date +%s.%N`
 # | Create a bucket / container |
 # -------------------------------
 # In the Swift and Azure ecosystem, the buckets are called containers. 
+
+box_out 'Test 1: Create a bucket / container'
 
 # use the Swift API
 if [ "$SWIFT_API" -eq 1 ] ; then
@@ -365,14 +392,35 @@ sleep 1
 
 # !!! This is not part of any time measurements !!!
 
-# use the S3 API with s3cmd
-if [ "$SWIFT_API" -ne 1 ] ; then
+# If we use the tool s3cmd...
+if [ "$S3PERF_CLIENT" -eq 1 ] ; then
   # We shall check at least 5 times
   LOOP_VARIABLE=5
   # until LOOP_VARIABLE is greater than 0 
   while [ $LOOP_VARIABLE -gt "0" ]; do 
     # Check if the Bucket is accessible
     if s3cmd ls s3://$BUCKET ; then
+      echo -e "${GREEN}[OK] The bucket is available.${NC}"
+      # Skip entire rest of loop.
+      break
+    else
+      echo -e "${YELLOW}[INFO] The bucket is not yet available!${NC}"
+      # Decrement variable
+      LOOP_VARIABLE=$((LOOP_VARIABLE-1))
+      # Wait a moment. 
+      sleep 1
+    fi
+  done
+fi
+
+# If we use the tool gsutil...
+if [ "$GOOGLE_API" -eq 1 ] ; then
+  # We shall check at least 5 times
+  LOOP_VARIABLE=5
+  # until LOOP_VARIABLE is greater than 0 
+  while [ $LOOP_VARIABLE -gt "0" ]; do 
+    # Check if the Bucket is accessible
+    if gsutil ls gs://$BUCKET ; then
       echo -e "${GREEN}[OK] The bucket is available.${NC}"
       # Skip entire rest of loop.
       break
@@ -393,6 +441,8 @@ TIME_OBJECTS_UPLOAD_START=`date +%s.%N`
 # ------------------------------
 # | Upload the Files (Objects) |
 # ------------------------------
+
+box_out 'Test 2: Upload the Files (Objects)'
 
 # If the "parallel" flag has been set, upload in parallel with GNU parallel
 if [ "$PARALLEL" -eq 1 ] ; then
@@ -427,7 +477,7 @@ if [ "$PARALLEL" -eq 1 ] ; then
   # use the Google API
   # The Google API upload in parallel per -m and can't use GNU Parallel.
     # Upload files in parallel
-    if find $DIRECTORY/*.txt | gsutil -m cp -r $DIRECTORY/*.txt gs://$BUCKET ; then
+    if gsutil -m cp -r $DIRECTORY/*.txt gs://$BUCKET ; then
       echo -e "${GREEN}[OK] Files have been uploaded.${NC}"
     else
       echo -e "${RED}[ERROR] Unable to upload the files.${NC}" && exit 1
@@ -514,10 +564,13 @@ sleep 1
 # Start of the 3rd time measurement
 TIME_OBJECTS_LIST_START=`date +%s.%N`
 
-# ----------------------------------------
-# | List files inside bucket / container |
-# ----------------------------------------
+
+# --------------------------------------------
+# | List files inside the bucket / container |
+# --------------------------------------------
 # In the Swift and Azure ecosystem, the buckets are called containers. 
+
+box_out 'Test 3: List files inside the bucket / container'
 
 # use the Swift API
 if [ "$SWIFT_API" -eq 1 ] ; then
@@ -570,8 +623,10 @@ TIME_OBJECTS_LIST=`echo "scale=3 ; (${TIME_OBJECTS_LIST_END} - ${TIME_OBJECTS_LI
 TIME_OBJECTS_DOWNLOAD_START=`date +%s.%N`
 
 # --------------------------------
-# | Download the Files (Objects) |
+# | Download the files (objects) |
 # --------------------------------
+
+box_out 'Test 4: Download the files (objects)'
 
 # If the "parallel" flag has been set, download in parallel with GNU parallel
 if [ "$PARALLEL" -eq 1 ] ; then
@@ -705,8 +760,10 @@ BANDWIDTH_OBJECTS_DOWNLOAD=`echo "scale=3 ; ((((${SIZE_FILES} * ${NUM_FILES} * 8
 TIME_ERASE_OBJECTS_START=`date +%s.%N`
 
 # -----------------------------
-# | Erase the Files (Objects) |
+# | Erase the files (objects) |
 # -----------------------------
+
+box_out 'Test 5: Erase the files (objects)'
 
 # If the "parallel" flag has been set, download in parallel with GNU parallel
 if [ "$PARALLEL" -eq 1 ] ; then
@@ -743,7 +800,7 @@ if [ "$PARALLEL" -eq 1 ] ; then
   elif [ "$GOOGLE_API" -eq 1 ] ; then
   # use the Google API
     # The Google API delete in parallel per -m and can't use GNU Parallel.
-    if find $DIRECTORY/*.txt | gsutil -m rm gs://$BUCKET/* ; then
+    if gsutil -m rm gs://$BUCKET/* ; then
       echo -e "${GREEN}[OK] Files inside the bucket (container) ${BUCKET} have been erased.${NC}"
     else
       echo -e "${RED}[ERROR] Unable to erase the files inside the bucket (container) ${BUCKET}.${NC}" && exit 1
@@ -751,7 +808,8 @@ if [ "$PARALLEL" -eq 1 ] ; then
   else
   # use the S3 API with s3cmd
     #  Erase files (objects) inside the bucket in parallel
-    if find $DIRECTORY/*.txt | parallel s3cmd del --recursive s3://$BUCKET/* ; then
+    # -type f -printf "%f\n" gives back just the filename and not the folder information
+    if find $DIRECTORY/*.txt -type f -printf "%f\n" | parallel s3cmd del s3://$BUCKET/{} ; then
       echo -e "${GREEN}[OK] Files inside the bucket ${BUCKET} have been erased.${NC}"
     else
       echo -e "${RED}[ERROR] Unable to erase the files inside the bucket ${BUCKET}.${NC}" && exit 1
@@ -815,9 +873,7 @@ TIME_ERASE_OBJECTS_END=`date +%s.%N`
 TIME_ERASE_OBJECTS=`echo "scale=3 ; (${TIME_ERASE_OBJECTS_END} - ${TIME_ERASE_OBJECTS_START})/1" | bc | sed 's/^\./0./'`
 
 
-# Create the bucket again in case mc is used, because it is impossible to erase just the objects.
-# We need a bucket to erase it in the next step.
-
+  
 # Check that the bucket is really gone and then create it new. 
 # Strange things happened with some services in the past...
 
@@ -844,6 +900,10 @@ if [ "$MINIO_CLIENT" -eq 1 ] ; then
     fi
   done
   
+  # Create the bucket again in case mc is used, because it is impossible to erase just the objects.
+  # We need a bucket to erase it in the next step.
+
+
   # Create the bucket again in order to erase it in the next step
   if mc mb $MINIO_CLIENT_ALIAS/$BUCKET; then
     echo -e "${GREEN}[OK] Bucket ${BUCKET} has been created again to erase it as next step.${NC}"
@@ -858,10 +918,12 @@ fi
 # Start of the 6th time measurement
 TIME_ERASE_BUCKET_START=`date +%s.%N`
 
-# ----------------------------
-# | Erase bucket / container |
-# ----------------------------
+# --------------------------------
+# | Erase the bucket / container |
+# --------------------------------
 # In the Swift and Azure ecosystem, the buckets are called containers. 
+
+box_out 'Test 6: Erase the bucket / container'
 
 # use the Swift API
 if [ "$SWIFT_API" -eq 1 ] ; then
@@ -919,19 +981,19 @@ if [ "$NOT_CLEAN_UP" -ne 1 ] ; then
   fi
 fi
 
-echo 'Required time to create the bucket:                 '${TIME_CREATE_BUCKET} s
-echo 'Required time to upload the files:                  '${TIME_OBJECTS_UPLOAD} s
-echo 'Required time to fetch a list of files:             '${TIME_OBJECTS_LIST} s
-echo 'Required time to download the files:                '${TIME_OBJECTS_DOWNLOAD} s
-echo 'Required time to erase the objects:                 '${TIME_ERASE_OBJECTS} s
-echo 'Required time to erase the bucket:                  '${TIME_ERASE_BUCKET} s
+echo '[1] Required time to create the bucket:                 '${TIME_CREATE_BUCKET} s
+echo '[2] Required time to upload the files:                  '${TIME_OBJECTS_UPLOAD} s
+echo '[3] Required time to fetch a list of files:             '${TIME_OBJECTS_LIST} s
+echo '[4] Required time to download the files:                '${TIME_OBJECTS_DOWNLOAD} s
+echo '[5] Required time to erase the objects:                 '${TIME_ERASE_OBJECTS} s
+echo '[6] Required time to erase the bucket:                  '${TIME_ERASE_BUCKET} s
 
 TIME_SUM=`echo "scale=3 ; (${TIME_CREATE_BUCKET} + ${TIME_OBJECTS_UPLOAD} + ${TIME_OBJECTS_LIST} + ${TIME_OBJECTS_DOWNLOAD} + ${TIME_ERASE_OBJECTS} + ${TIME_ERASE_BUCKET})/1" | bc | sed 's/^\./0./'`
 
-echo 'Required time to perform all S3-related operations: '${TIME_SUM} s
+echo '    Required time to perform all S3-related operations: '${TIME_SUM} s
 echo ''
-echo 'Bandwidth during the upload of the files:           '${BANDWIDTH_OBJECTS_UPLOAD} Mbps
-echo 'Bandwidth during the download of the files:         '${BANDWIDTH_OBJECTS_DOWNLOAD} Mbps
+echo '    Bandwidth during the upload of the files:           '${BANDWIDTH_OBJECTS_UPLOAD} Mbps
+echo '    Bandwidth during the download of the files:         '${BANDWIDTH_OBJECTS_DOWNLOAD} Mbps
 
 # Create an output file only of the command line parameter was set => value of OUTPUT_FILE is not equal 0
 if ([[ "$OUTPUT_FILE" -ne 0 ]]) ; then
