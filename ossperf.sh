@@ -6,8 +6,8 @@
 # author:       Dr. Christian Baun, Rosa Maria Spanou, Marius Wernicke
 # url:          https://github.com/christianbaun/ossperf
 # license:      GPLv3
-# date:         June 21th 2019
-# version:      3.2
+# date:         June 22nd 2019
+# version:      3.3
 # bash_version: 4.4.12(1)-release
 # requires:     md5sum (tested with version 8.26),
 #               bc (tested with version 1.06.95),
@@ -109,7 +109,7 @@ done
 
 # If neither using the Swift client, the Minio client (mc), the Azure client (az) 
 # or the Google storage client (gsutil) has been specified via command line parameter...
-if ( [[ "$MINIO_CLIENT" -ne 1 ]] || [[ "$AZURE_CLI" -ne 1 ]] || [[ "$GOOGLE_API" -ne 1 ]] || [[ "$SWIFT_API" -ne 1 ]]) ; then
+if [[ "$MINIO_CLIENT" -ne 1  && "$AZURE_CLI" -ne 1 && "$GOOGLE_API" -ne 1 && "$SWIFT_API" -ne 1 ]] ; then
    # ... then we use the command line client s3cmd. This is the default client of ossperf
    S3PERF_CLIENT=1
    echo -e "${YELLOW}[INFO] ossperf will use the tool s3cmd because no other client tool has been specified via command line parameter.${NC}"
@@ -433,6 +433,28 @@ if [ "$GOOGLE_API" -eq 1 ] ; then
     fi
   done
 fi
+
+# If we use the tool mc...
+if [ "$MINIO_CLIENT" -eq 1 ] ; then
+  # We shall check at least 5 times
+  LOOP_VARIABLE=5
+  # until LOOP_VARIABLE is greater than 0 
+  while [ $LOOP_VARIABLE -gt "0" ]; do 
+    # Check if the Bucket is accessible
+    if mc ls $MINIO_CLIENT_ALIAS/$BUCKET ; then
+      echo -e "${GREEN}[OK] The bucket is available.${NC}"
+      # Skip entire rest of loop.
+      break
+    else
+      echo -e "${YELLOW}[INFO] The bucket is not yet available!${NC}"
+      # Decrement variable
+      LOOP_VARIABLE=$((LOOP_VARIABLE-1))
+      # Wait a moment. 
+      sleep 1
+    fi
+  done
+fi
+
 
 # Start of the 2nd time measurement
 TIME_OBJECTS_UPLOAD_START=`date +%s.%N`
