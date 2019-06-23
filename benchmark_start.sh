@@ -19,10 +19,10 @@ for i in 512 1024 2048 4096 8192 16384 32768 65536 131072 262144 524288 1048576 
     for x in 1 2 3 4 5
 #     for x in 1
       do       
-#         ./ossperf.sh -n 10 -s ${i} -m minio -o 2>&1 # Minio Client (mc) serial   
-          ./ossperf.sh -n 10 -s ${i} -m myminioneu -p -o 2>&1 # Minio Client (mc) parallel       
-#         ./ossperf.sh -n 10 -s ${i} -b ossperf-testbucket -o 2>&1 # s3cmd S3 serial  
-#          ./ossperf.sh -n 10 -s ${i} -b ossperf-testbucket -p -o 2>&1 # s3cmd parallel
+#          ./ossperf.sh -n 10 -s ${i} -m myminioneu -o 2>&1 # Minio Client (mc) serial   
+#          ./ossperf.sh -n 10 -s ${i} -m myminioneu -p -o 2>&1 # Minio Client (mc) parallel       
+#          ./ossperf.sh -n 10 -s ${i} -b ossperf-testbucket -o 2>&1 # s3cmd S3 serial  
+          ./ossperf.sh -n 10 -s ${i} -b ossperf-testbucket -p -o 2>&1 # s3cmd parallel
 #          ./ossperf.sh -n 10 -s ${i} -b ossperf-testbucket -g -o 2>&1 # gsutil serial
 #          ./ossperf.sh -n 10 -s ${i} -b ossperf-testbucket -g -p -o 2>&1 # gsutil parallel
 #          ./ossperf.sh -n 10 -s ${i} -u -p -o 2>&1 # Nimbus Cumulus und S3ninja parallel

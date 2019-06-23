@@ -6,8 +6,8 @@
 # author:       Dr. Christian Baun, Rosa Maria Spanou, Marius Wernicke
 # url:          https://github.com/christianbaun/ossperf
 # license:      GPLv3
-# date:         June 22nd 2019
-# version:      3.3
+# date:         June 23rd 2019
+# version:      3.4
 # bash_version: 4.4.12(1)-release
 # requires:     md5sum (tested with version 8.26),
 #               bc (tested with version 1.06.95),
@@ -293,6 +293,50 @@ while [ $LOOP_VARIABLE -gt "0" ]; do
     sleep 1
   fi
 done
+
+
+# ----------------------------------------------
+# | Check that a storage service is accessible |
+# ----------------------------------------------
+# This is not a part of the benchmark!
+# use the Swift API
+if [ "$SWIFT_API" -eq 1 ] ; then
+  if swift list ; then
+    echo -e "${GREEN}[OK] The storage service can be accessed via the tool swift.${NC}"
+  else
+    echo -e "${RED}[ERROR] Unable to access the storage service via the tool swift.${NC}" && exit 1
+  fi
+elif [ "$MINIO_CLIENT" -eq 1 ] ; then
+  # use the S3 API with mc
+  if mc ls $MINIO_CLIENT_ALIAS; then
+    echo -e "${GREEN}[OK] The storage service can be accessed via the tool mc.${NC}"
+  else
+    echo -e "${RED}[ERROR] Unable to access the storage service via the tool mc.${NC}" && exit 1
+  fi
+elif [ "$AZURE_CLI" -eq 1 ] ; then
+  # use the Azure CLI
+  if az storage container list ; then
+    echo -e "${GREEN}[OK] The storage service can be accessed via the tool az.${NC}"
+  else
+    echo -e "${RED}[ERROR] Unable to access the storage service via the tool az.${NC}" && exit 1
+  fi
+elif [ "$GOOGLE_API" -eq 1 ] ; then
+  # use the Google API
+  if gsutil ls ; then
+    echo -e "${GREEN}[OK] The storage service can be accessed via the tool gsutil.${NC}"
+  else
+    echo -e "${RED}[ERROR] Unable to access the storage service via the tool gsutil.${NC}" && exit 1
+  fi
+else
+  # use the S3 API with s3cmd
+  if s3cmd ls ; then
+    echo -e "${GREEN}[OK] The storage service can be accessed via the tool s3cmd.${NC}"
+  else
+    echo -e "${RED}[ERROR] Unable to access the storage service via the tool s3cmd.${NC}" && exit 1
+  fi
+fi
+
+
 
 
 # Check if the directory already exists
