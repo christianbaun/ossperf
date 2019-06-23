@@ -7,7 +7,7 @@
 # url:          https://github.com/christianbaun/ossperf
 # license:      GPLv3
 # date:         June 23rd 2019
-# version:      3.51
+# version:      3.52
 # bash_version: 4.4.12(1)-release
 # requires:     md5sum (tested with version 8.26),
 #               bc (tested with version 1.06.95),
@@ -425,6 +425,7 @@ elif [ "$GOOGLE_API" -eq 1 ] ; then
     else
       echo -e "${RED}[ERROR] Unable to create the bucket (container) ${BUCKET}.${NC}" && exit 1
     fi
+  fi
 else
   # use the S3 API with s3cmd
   if [ "$BUCKET_LOCATION" -eq 1 ] ; then
@@ -441,6 +442,7 @@ else
     else
       echo -e "${RED}[ERROR] Unable to create the bucket ${BUCKET}.${NC}" && exit 1
     fi
+  fi
 fi
 
 # End of the 1st time measurement
