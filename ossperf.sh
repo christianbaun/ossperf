@@ -7,7 +7,7 @@
 # url:          https://github.com/christianbaun/ossperf
 # license:      GPLv3
 # date:         June 23rd 2019
-# version:      3.4
+# version:      3.5
 # bash_version: 4.4.12(1)-release
 # requires:     md5sum (tested with version 8.26),
 #               bc (tested with version 1.06.95),
@@ -25,7 +25,7 @@
 
 function usage
 {
-echo "$SCRIPT -n files -s size [-b <bucket>] [-u] [-a] [-m <alias>] [-z] [-g] [-k] [-p] [-o]
+echo "$SCRIPT -n files -s size [-b <bucket>] [-u] [-a] [-m <alias>] [-z] [-g] [-k] [-l <location>] [-p] [-o]
 
 This script analyzes the performance and data integrity of S3-compatible
 storage services 
@@ -40,6 +40,7 @@ Arguments:
 -m : use the S3 API with the Minio Client (mc) instead of s3cmd. It is required to provide the alias of the mc configuration that shall be used
 -z : use the Azure CLI instead of the S3 API (this requires the python client for the Azure CLI and the environment variables AZURE_STORAGE_ACCOUNT and AZURE_STORAGE_ACCESS_KEY)
 -g : use the Google Cloud Storage CLI instead of the s3cmd (this requires the python client for the Google API)
+-l : use a specific site (location) for the bucket. This is supported e.g. by the AWS S3 and Google Cloud Storage
 -k : keep the local files and the directory afterwards (do not clean up)
 -p : upload and download the files in parallel
 -o : appended the results to a local file results.csv
@@ -68,6 +69,8 @@ UPPERCASE=0
 SWIFT_API=0
 MINIO_CLIENT=0
 MINIO_CLIENT_ALIAS=
+BUCKET_LOCATION=0 
+BUCKET_LOCATION_SITE=
 AZURE_CLI=0
 GOOGLE_API=0
 NOT_CLEAN_UP=0
@@ -97,6 +100,8 @@ while getopts "hn:s:b:uam:zgkpo" ARG ; do
        MINIO_CLIENT_ALIAS=${OPTARG} ;;
     z) AZURE_CLI=1 ;;
     g) GOOGLE_API=1 ;;
+    l) BUCKET_LOCATION=1 
+       BUCKET_LOCATION_SITE=${OPTARG} ;;
     k) NOT_CLEAN_UP=1 ;;
     p) PARALLEL=1 ;;
     o) OUTPUT_FILE=1 ;;
@@ -406,18 +411,36 @@ elif [ "$AZURE_CLI" -eq 1 ] ; then
   fi
 elif [ "$GOOGLE_API" -eq 1 ] ; then
   # use the Google API
-  if gsutil mb -l EU gs://$BUCKET ; then
-    echo -e "${GREEN}[OK] Bucket ${BUCKET} has been created.${NC}"
+  if [ "$BUCKET_LOCATION" -eq 1 ] ; then
+    # If a specific site (location) for the bucket has been specified via command line parameter
+    if gsutil mb -l $BUCKET_LOCATION_SITE gs://$BUCKET ; then
+      echo -e "${GREEN}[OK] Bucket ${BUCKET} has been created.${NC}"
+    else
+      echo -e "${RED}[ERROR] Unable to create the bucket (container) ${BUCKET}.${NC}" && exit 1
+    fi
   else
-    echo -e "${RED}[ERROR] Unable to create the bucket (container) ${BUCKET}.${NC}" && exit 1
-  fi
+    # If no specific site (location) for the bucket has been specified via command line parameter
+    if gsutil mb gs://$BUCKET ; then
+      echo -e "${GREEN}[OK] Bucket ${BUCKET} has been created.${NC}"
+    else
+      echo -e "${RED}[ERROR] Unable to create the bucket (container) ${BUCKET}.${NC}" && exit 1
+    fi
 else
   # use the S3 API with s3cmd
-  if s3cmd mb s3://$BUCKET ; then
-    echo -e "${GREEN}[OK] Bucket ${BUCKET} has been created.${NC}"
+  if [ "$BUCKET_LOCATION" -eq 1 ] ; then
+    # If a specific site (location) for the bucket has been specified via command line parameter
+    if s3cmd mb s3://$BUCKET --bucket-location=$BUCKET_LOCATION_SITE ; then
+      echo -e "${GREEN}[OK] Bucket ${BUCKET} has been created.${NC}"
+    else
+      echo -e "${RED}[ERROR] Unable to create the bucket ${BUCKET}.${NC}" && exit 1
+    fi
   else
-    echo -e "${RED}[ERROR] Unable to create the bucket ${BUCKET}.${NC}" && exit 1
-  fi
+    # If no specific site (location) for the bucket has been specified via command line parameter
+    if s3cmd mb s3://$BUCKET ; then
+      echo -e "${GREEN}[OK] Bucket ${BUCKET} has been created.${NC}"
+    else
+      echo -e "${RED}[ERROR] Unable to create the bucket ${BUCKET}.${NC}" && exit 1
+    fi
 fi
 
 # End of the 1st time measurement
