@@ -7,7 +7,7 @@
 # url:          https://github.com/christianbaun/ossperf
 # license:      GPLv3
 # date:         June 23rd 2019
-# version:      3.5
+# version:      3.51
 # bash_version: 4.4.12(1)-release
 # requires:     md5sum (tested with version 8.26),
 #               bc (tested with version 1.06.95),
@@ -86,7 +86,7 @@ YELLOW='\033[0;33m'       # Yellow color
 BLUE='\033[0;34m'         # Blue color
 WHITE='\033[0;37m'        # White color
 
-while getopts "hn:s:b:uam:zgkpo" ARG ; do
+while getopts "hn:s:b:uam:zgl:kpo" ARG ; do
   case $ARG in
     h) usage ;;
     n) NUM_FILES=${OPTARG} ;;

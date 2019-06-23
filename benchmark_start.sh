@@ -6,8 +6,8 @@
 # author:       Dr. Christian Baun
 # url:          https://github.com/christianbaun/ossperf
 # license:      GPLv2
-# date:         June 21th 2019
-# version:      1.07
+# date:         June 23rd 2019
+# version:      1.08
 # bash_version: 4.4.12(1)-release
 # requires:     
 # notes: 
@@ -22,9 +22,11 @@ for i in 512 1024 2048 4096 8192 16384 32768 65536 131072 262144 524288 1048576 
 #          ./ossperf.sh -n 10 -s ${i} -m myminioneu -o 2>&1 # Minio Client (mc) serial   
 #          ./ossperf.sh -n 10 -s ${i} -m myminioneu -p -o 2>&1 # Minio Client (mc) parallel       
 #          ./ossperf.sh -n 10 -s ${i} -b ossperf-testbucket -o 2>&1 # s3cmd S3 serial  
-          ./ossperf.sh -n 10 -s ${i} -b ossperf-testbucket -p -o 2>&1 # s3cmd parallel
+#          ./ossperf.sh -n 10 -s ${i} -b ossperf-testbucket -p -o 2>&1 # s3cmd parallel
 #          ./ossperf.sh -n 10 -s ${i} -b ossperf-testbucket -g -o 2>&1 # gsutil serial
 #          ./ossperf.sh -n 10 -s ${i} -b ossperf-testbucket -g -p -o 2>&1 # gsutil parallel
+#          ./ossperf.sh -n 10 -s ${i} -b ossperf-testbucket -g -l europe-west3 -o 2>&1 # gsutil serial
+          ./ossperf.sh -n 10 -s ${i} -b ossperf-testbucket -g -l europe-west3 -p -o 2>&1 # gsutil parallel
 #          ./ossperf.sh -n 10 -s ${i} -u -p -o 2>&1 # Nimbus Cumulus und S3ninja parallel
 #          ./ossperf.sh -n 10 -s ${i} -u -o 2>&1 # Nimbus Cumulus und S3ninja serial
         # "$?" contains the return code of the last command executed.
