@@ -6,8 +6,8 @@
 # author:       Dr. Christian Baun, Rosa Maria Spanou, Marius Wernicke
 # url:          https://github.com/christianbaun/ossperf
 # license:      GPLv3
-# date:         June 23rd 2019
-# version:      3.52
+# date:         July 17th 2019
+# version:      3.53
 # bash_version: 4.4.12(1)-release
 # requires:     md5sum (tested with version 8.26),
 #               bc (tested with version 1.06.95),
@@ -205,11 +205,17 @@ if [ "$SWIFT_API" -eq 1 ] ; then
   fi
 fi
 
-# Only if the user wants to use the Azure CLI and not the S3 API
+# Only if the user wants to use the Azure CLI
 if [ "$AZURE_CLI" -eq 1 ] ; then
   # ... the script needs to check, if the command line tool az installed
-  command -v az >/dev/null 2>&1 || { echo -e "${RED}[ERROR] If the Azure CLI shall be used, the command line tool az need to be installed first. Please install it. Probably these commands will install the az client:${NC}\ncd $HOME; curl -L https://aka.ms/InstallAzureCli | bash; exec -l $SHELL"; exit 1; }
-  
+  if ! [ -x "$(command -v az)" ]; then
+      echo -e "${RED}[ERROR] If the Azure CLI shall be used, the command line tool az need to be installed first. Please install it. Please install it. Probably these commands will install the az client:${NC}\ncd $HOME; curl -L https://aka.ms/InstallAzureCli | bash; exec -l $SHELL ${NC}" && exit 1
+  else
+      echo -e "${YELLOW}[INFO] The tool az has been found on this system.${NC}"
+      # Print out the version information of the Azure CLI tool
+      az --version | grep azure-cli
+  fi
+
   # ... the script needs to check, if the environment variable AZURE_STORAGE_ACCOUNT is set
   if [ -z "$AZURE_STORAGE_ACCOUNT" ] ; then
     echo -e "${RED}[ERROR] If the Azure CLI shall be used, the environment variable AZURE_STORAGE_ACCOUNT must contain the Storage Account Name of the storage service. Please set it with this command:${NC}\nexport AZURE_STORAGE_ACCOUNT=<storage_account_name>" && exit 1
