@@ -41,7 +41,7 @@ Arguments:
 -z : use the Azure CLI instead of the S3 API (this requires the python client for the Azure CLI and the environment variables AZURE_STORAGE_ACCOUNT and AZURE_STORAGE_ACCESS_KEY)
 -g : use the Google Cloud Storage CLI instead of the s3cmd (this requires the python client for the Google API)
 -l : use a specific site (location) for the bucket. This is supported e.g. by the AWS S3 and Google Cloud Storage
--s : use the s4cmd client. It can only interact with the AWS S3 service.  The tool uses the ~/.s3cfg configuration file if it exists. Otherwise it will use the content of the environment variables S3_ACCESS_KEY and S3_SECRET_KEY to access the AWS S3 service
+-r : use the s4cmd client. It can only interact with the AWS S3 service.  The tool uses the ~/.s3cfg configuration file if it exists. Otherwise it will use the content of the environment variables S3_ACCESS_KEY and S3_SECRET_KEY to access the AWS S3 service
 -k : keep the local files and the directory afterwards (do not clean up)
 -p : upload and download the files in parallel
 -o : appended the results to a local file results.csv
@@ -88,7 +88,7 @@ YELLOW='\033[0;33m'       # Yellow color
 BLUE='\033[0;34m'         # Blue color
 WHITE='\033[0;37m'        # White color
 
-while getopts "hn:s:b:uam:zgl:kpo" ARG ; do
+while getopts "hn:s:b:uam:zgl:rkpo" ARG ; do
   case $ARG in
     h) usage ;;
     n) NUM_FILES=${OPTARG} ;;
@@ -104,7 +104,7 @@ while getopts "hn:s:b:uam:zgl:kpo" ARG ; do
     g) GOOGLE_API=1 ;;
     l) BUCKET_LOCATION=1 
        BUCKET_LOCATION_SITE=${OPTARG} ;;
-    s) S4CMD_CLIENT=1 ;;
+    r) S4CMD_CLIENT=1 ;;
     k) NOT_CLEAN_UP=1 ;;
     p) PARALLEL=1 ;;
     o) OUTPUT_FILE=1 ;;
