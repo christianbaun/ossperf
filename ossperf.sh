@@ -6,8 +6,8 @@
 # author:       Dr. Christian Baun, Rosa Maria Spanou, Marius Wernicke
 # url:          https://github.com/christianbaun/ossperf
 # license:      GPLv3
-# date:         July 17th 2019
-# version:      3.53
+# date:         July 24th 2019
+# version:      3.6
 # bash_version: 4.4.12(1)-release
 # requires:     md5sum (tested with version 8.26),
 #               bc (tested with version 1.06.95),
@@ -25,7 +25,7 @@
 
 function usage
 {
-echo "$SCRIPT -n files -s size [-b <bucket>] [-u] [-a] [-m <alias>] [-z] [-g] [-k] [-l <location>] [-p] [-o]
+echo "$SCRIPT -n files -s size [-b <bucket>] [-u] [-a] [-m <alias>] [-z] [-g] [-k] [-l <location>] [-s] [-k] [-p] [-o]
 
 This script analyzes the performance and data integrity of S3-compatible
 storage services 
@@ -41,6 +41,7 @@ Arguments:
 -z : use the Azure CLI instead of the S3 API (this requires the python client for the Azure CLI and the environment variables AZURE_STORAGE_ACCOUNT and AZURE_STORAGE_ACCESS_KEY)
 -g : use the Google Cloud Storage CLI instead of the s3cmd (this requires the python client for the Google API)
 -l : use a specific site (location) for the bucket. This is supported e.g. by the AWS S3 and Google Cloud Storage
+-s : use the s4cmd client. It can only interact with the AWS S3 service.  The tool uses the ~/.s3cfg configuration file if it exists. Otherwise it will use the content of the environment variables S3_ACCESS_KEY and S3_SECRET_KEY to access the AWS S3 service
 -k : keep the local files and the directory afterwards (do not clean up)
 -p : upload and download the files in parallel
 -o : appended the results to a local file results.csv
@@ -77,6 +78,7 @@ NOT_CLEAN_UP=0
 PARALLEL=0
 LIST_OF_FILES=
 OUTPUT_FILE=0
+S4CMD_CLIENT=0
 S3PERF_CLIENT=0
 
 RED='\033[0;31m'          # Red color
@@ -102,6 +104,7 @@ while getopts "hn:s:b:uam:zgl:kpo" ARG ; do
     g) GOOGLE_API=1 ;;
     l) BUCKET_LOCATION=1 
        BUCKET_LOCATION_SITE=${OPTARG} ;;
+    s) S4CMD_CLIENT=1 ;;
     k) NOT_CLEAN_UP=1 ;;
     p) PARALLEL=1 ;;
     o) OUTPUT_FILE=1 ;;
@@ -112,9 +115,9 @@ while getopts "hn:s:b:uam:zgl:kpo" ARG ; do
 done
 
 
-# If neither using the Swift client, the Minio client (mc), the Azure client (az) 
+# If neither using the Swift client, the Minio client (mc), the Azure client (az), the s4cmd client 
 # or the Google storage client (gsutil) has been specified via command line parameter...
-if [[ "$MINIO_CLIENT" -ne 1  && "$AZURE_CLI" -ne 1 && "$GOOGLE_API" -ne 1 && "$SWIFT_API" -ne 1 ]] ; then
+if [[ "$MINIO_CLIENT" -ne 1  && "$AZURE_CLI" -ne 1 && "$S4CMD_CLIENT" -ne 1 && "$GOOGLE_API" -ne 1 && "$SWIFT_API" -ne 1 ]] ; then
    # ... then we use the command line client s3cmd. This is the default client of ossperf
    S3PERF_CLIENT=1
    echo -e "${YELLOW}[INFO] ossperf will use the tool s3cmd because no other client tool has been specified via command line parameter.${NC}"
@@ -224,6 +227,19 @@ if [ "$AZURE_CLI" -eq 1 ] ; then
   # ... the script needs to check, if the environment variable AZURE_STORAGE_ACCESS_KEY is set
   if [ -z "$AZURE_STORAGE_ACCESS_KEY" ] ; then
     echo -e "${RED}[ERROR] If the Azure CLI shall be used, the environment variable AZURE_STORAGE_ACCESS_KEY must contain the Account Key of the storage service. Please set it with this command:${NC}\nexport AZURE_STORAGE_ACCESS_KEY=<storage_account_key>" && exit 1
+  fi
+fi
+
+use the s4cmd client. This tool can only interact with the AWS S3 service.  The tool uses the ~/.s3cfg configuration file if it exists. Otherwise it will use the content of the environment variables S3_ACCESS_KEY and S3_SECRET_KEY to access the AWS S3 service
+
+if [ "$S4CMD_CLIENT" -eq 1 ] ; then
+# ... the script needs to check, if the command line tool s4cmd is installed
+  if ! [ -x "$(command -v s4cmd)" ]; then
+    echo -e "${RED}[ERROR] If the s4cmd shall be used instead of s3cmd, it need to be installed and configured first. Please install it.\nThe installation is well documented here:${NC} https://github.com/bloomreach/s4cmd \nThis tool can only interact with the AWS S3 service.\nThe tool uses the ~/.s3cfg configuration file if it exists.\nOtherwise it will use the content of the environment variables\nS3_ACCESS_KEY and S3_SECRET_KEY to access the AWS S3 service."
+    exit 1
+  else
+    echo -e "${YELLOW}[INFO] The s4cmd client has been found on this system.${NC}"
+    s4cmd --version
   fi
 fi
 
@@ -338,6 +354,13 @@ elif [ "$GOOGLE_API" -eq 1 ] ; then
   else
     echo -e "${RED}[ERROR] Unable to access the storage service via the tool gsutil.${NC}" && exit 1
   fi
+elif [ "$S4CMD_CLIENT" -eq 1 ] ; then
+  # use the S3 API with s4cmd
+  if s4cmd ls ; then
+    echo -e "${GREEN}[OK] The storage service can be accessed via the tool s4cmd.${NC}"
+  else
+    echo -e "${RED}[ERROR] Unable to access the storage service via the tool s4cmd.${NC}" && exit 1
+  fi
 else
   # use the S3 API with s3cmd
   if s3cmd ls ; then
@@ -346,7 +369,6 @@ else
     echo -e "${RED}[ERROR] Unable to access the storage service via the tool s3cmd.${NC}" && exit 1
   fi
 fi
-
 
 
 
@@ -432,6 +454,24 @@ elif [ "$GOOGLE_API" -eq 1 ] ; then
       echo -e "${RED}[ERROR] Unable to create the bucket (container) ${BUCKET}.${NC}" && exit 1
     fi
   fi
+elif [ "$S4CMD_CLIENT" -eq 1 ] ; then
+  # use the S3 API with s4cmd
+  if [ "$BUCKET_LOCATION" -eq 1 ] ; then
+    # If a specific site (location) for the bucket has been specified via command line parameter
+    if s4cmd mb s3://$BUCKET ; then
+      echo -e "${GREEN}[OK] Bucket ${BUCKET} has been created.${NC}"
+      echo -e "${YELLOW}[INFO] The tool s4cmd has no command line parameter to specify the site (location) of a bucket.\nTherefore, the bucket has been created in the default region.\nIt is possible to specify the default region with the environment variable AWS_DEFAULT_REGION.${NC}\nexport AWS_DEFAULT_REGION=<region>"
+    else
+      echo -e "${RED}[ERROR] Unable to create the bucket ${BUCKET}.${NC}" && exit 1
+    fi
+  else
+    # If no specific site (location) for the bucket has been specified via command line parameter
+    if s4cmd mb s3://$BUCKET ; then
+      echo -e "${GREEN}[OK] Bucket ${BUCKET} has been created.${NC}"
+    else
+      echo -e "${RED}[ERROR] Unable to create the bucket ${BUCKET}.${NC}" && exit 1
+    fi
+  fi
 else
   # use the S3 API with s3cmd
   if [ "$BUCKET_LOCATION" -eq 1 ] ; then
@@ -475,6 +515,27 @@ if [ "$S3PERF_CLIENT" -eq 1 ] ; then
   while [ $LOOP_VARIABLE -gt "0" ]; do 
     # Check if the Bucket is accessible
     if s3cmd ls s3://$BUCKET ; then
+      echo -e "${GREEN}[OK] The bucket is available.${NC}"
+      # Skip entire rest of loop.
+      break
+    else
+      echo -e "${YELLOW}[INFO] The bucket is not yet available!${NC}"
+      # Decrement variable
+      LOOP_VARIABLE=$((LOOP_VARIABLE-1))
+      # Wait a moment. 
+      sleep 1
+    fi
+  done
+fi
+
+# If we use the tool s4cmd...
+if [ "$S4CMD_CLIENT" -eq 1 ] ; then
+  # We shall check at least 5 times
+  LOOP_VARIABLE=5
+  # until LOOP_VARIABLE is greater than 0 
+  while [ $LOOP_VARIABLE -gt "0" ]; do 
+    # Check if the Bucket is accessible
+    if s4cmd ls s3://$BUCKET ; then
       echo -e "${GREEN}[OK] The bucket is available.${NC}"
       # Skip entire rest of loop.
       break
