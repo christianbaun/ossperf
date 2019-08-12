@@ -288,8 +288,8 @@ fi
 
 # Validate that...
 # SIZE_FILES is not 0 and not bigger than 16777216
-if ( [[ "$SIZE_FILES" -eq 0 ]] || [[ "$SIZE_FILES" -gt 16777216 ]] ) ; then
-   echo -e "${RED}[ERROR] Attention: The size of the file(s) must not 0 and the maximum size is 16.777.216 Byte!${NC}"
+if [[ "$SIZE_FILES" -lt 4096 || "$SIZE_FILES" -gt 16777216 ]] ; then
+   echo -e "${RED}[ERROR] Attention: The size of the file(s) must be between 4096 and 16777216 Bytes!${NC}"
    usage
    exit 1
 fi
