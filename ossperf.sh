@@ -230,8 +230,7 @@ if [ "$AZURE_CLI" -eq 1 ] ; then
   fi
 fi
 
-use the s4cmd client. This tool can only interact with the AWS S3 service.  The tool uses the ~/.s3cfg configuration file if it exists. Otherwise it will use the content of the environment variables S3_ACCESS_KEY and S3_SECRET_KEY to access the AWS S3 service
-
+# use the s4cmd client. This tool can only interact with the AWS S3 service.  The tool uses the ~/.s3cfg configuration file if it exists. Otherwise it will use the content of the environment variables S3_ACCESS_KEY and S3_SECRET_KEY to access the AWS S3 service
 if [ "$S4CMD_CLIENT" -eq 1 ] ; then
 # ... the script needs to check, if the command line tool s4cmd is installed
   if ! [ -x "$(command -v s4cmd)" ]; then
