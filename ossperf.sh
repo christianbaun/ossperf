@@ -389,7 +389,7 @@ fi
 # This is not a part of the benchmark!
 for ((i=1; i<=${NUM_FILES}; i+=1))
 do
-  if dd if=/dev/urandom of=$DIRECTORY/ossperf-testfile$i.txt bs=1 count=$SIZE_FILES ; then
+  if dd if=/dev/urandom of=$DIRECTORY/ossperf-testfile$i.txt bs=4096 count=$(($SIZE_FILES/4096) ; then
     echo -e "${GREEN}[OK] File with random content has been created.${NC}"
   else
     echo -e "${RED}[ERROR] Unable to create the file.${NC}" && exit 1
@@ -793,7 +793,7 @@ if [ "$PARALLEL" -eq 1 ] ; then
     # The swift client can download in parallel (and does so per default) but 
     # in order to keep the code simple, ossperf uses the parallel command here too.
     # This removes the subfolder name(s) in the output of find: -type f -printf  "%f\n"
-    if find $DIRECTORY/*.txt -type f -printf  "%f\n" | parallel swift download --object-threads=1 $BUCKET {} ; then
+    if find $DIRECTORY/*.txt -type f -printf  "%f\n" | parallel swift download --object-threads=1 $BUCKET testfiles/{} ; then
       echo -e "${GREEN}[OK] Files have been downloaded.${NC}"
     else
       echo -e "${RED}[ERROR] Unable to download the files.${NC}" && exit 1
