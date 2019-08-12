@@ -3,11 +3,11 @@
 # title:        ossperf.sh
 # description:  This script analyzes the performance and data integrity of 
 #               S3-compatible storage services 
-# author:       Dr. Christian Baun, Rosa Maria Spanou, Marius Wernicke
+# author:       Dr. Christian Baun, Rosa Maria Spanou, Marius Wernicke, Brian_P
 # url:          https://github.com/christianbaun/ossperf
 # license:      GPLv3
-# date:         July 24th 2019
-# version:      3.6
+# date:         August 12th 2019
+# version:      3.61
 # bash_version: 4.4.12(1)-release
 # requires:     md5sum (tested with version 8.26),
 #               bc (tested with version 1.06.95),
