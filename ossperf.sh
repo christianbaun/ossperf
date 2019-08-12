@@ -796,7 +796,7 @@ if [ "$PARALLEL" -eq 1 ] ; then
     if find $DIRECTORY/*.txt -type f -printf  "%f\n" | parallel swift download --object-threads=1 $BUCKET {} ; then
       echo -e "${GREEN}[OK] Files have been downloaded.${NC}"
     else
-      echo -e "${RED}[ERROR] Unable to downloaded. the files.${NC}" && exit 1
+      echo -e "${RED}[ERROR] Unable to download the files.${NC}" && exit 1
     fi
   elif [ "$MINIO_CLIENT" -eq 1 ] ; then
   # use the S3 API with mc
