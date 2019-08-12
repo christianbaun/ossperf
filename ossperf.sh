@@ -230,8 +230,7 @@ if [ "$AZURE_CLI" -eq 1 ] ; then
   fi
 fi
 
-use the s4cmd client. This tool can only interact with the AWS S3 service.  The tool uses the ~/.s3cfg configuration file if it exists. Otherwise it will use the content of the environment variables S3_ACCESS_KEY and S3_SECRET_KEY to access the AWS S3 service
-
+# use the s4cmd client. This tool can only interact with the AWS S3 service.  The tool uses the ~/.s3cfg configuration file if it exists. Otherwise it will use the content of the environment variables S3_ACCESS_KEY and S3_SECRET_KEY to access the AWS S3 service
 if [ "$S4CMD_CLIENT" -eq 1 ] ; then
 # ... the script needs to check, if the command line tool s4cmd is installed
   if ! [ -x "$(command -v s4cmd)" ]; then
@@ -289,8 +288,8 @@ fi
 
 # Validate that...
 # SIZE_FILES is not 0 and not bigger than 16777216
-if ( [[ "$SIZE_FILES" -eq 0 ]] || [[ "$SIZE_FILES" -gt 16777216 ]] ) ; then
-   echo -e "${RED}[ERROR] Attention: The size of the file(s) must not 0 and the maximum size is 16.777.216 Byte!${NC}"
+if [[ "$SIZE_FILES" -lt 4096 || "$SIZE_FILES" -gt 16777216 ]] ; then
+   echo -e "${RED}[ERROR] Attention: The size of the file(s) must be between 4096 and 16777216 Bytes!${NC}"
    usage
    exit 1
 fi
@@ -390,7 +389,7 @@ fi
 # This is not a part of the benchmark!
 for ((i=1; i<=${NUM_FILES}; i+=1))
 do
-  if dd if=/dev/urandom of=$DIRECTORY/ossperf-testfile$i.txt bs=1 count=$SIZE_FILES ; then
+  if dd if=/dev/urandom of=$DIRECTORY/ossperf-testfile$i.txt bs=4096 count=$(($SIZE_FILES/4096) ; then
     echo -e "${GREEN}[OK] File with random content has been created.${NC}"
   else
     echo -e "${RED}[ERROR] Unable to create the file.${NC}" && exit 1
@@ -794,10 +793,10 @@ if [ "$PARALLEL" -eq 1 ] ; then
     # The swift client can download in parallel (and does so per default) but 
     # in order to keep the code simple, ossperf uses the parallel command here too.
     # This removes the subfolder name(s) in the output of find: -type f -printf  "%f\n"
-    if find $DIRECTORY/*.txt -type f -printf  "%f\n" | parallel swift download --object-threads=1 $BUCKET {} ; then
+    if find $DIRECTORY/*.txt -type f -printf  "%f\n" | parallel swift download --object-threads=1 $BUCKET testfiles/{} ; then
       echo -e "${GREEN}[OK] Files have been downloaded.${NC}"
     else
-      echo -e "${RED}[ERROR] Unable to downloaded. the files.${NC}" && exit 1
+      echo -e "${RED}[ERROR] Unable to download the files.${NC}" && exit 1
     fi
   elif [ "$MINIO_CLIENT" -eq 1 ] ; then
   # use the S3 API with mc
