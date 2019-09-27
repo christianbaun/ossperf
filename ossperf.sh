@@ -389,7 +389,7 @@ fi
 # This is not a part of the benchmark!
 for ((i=1; i<=${NUM_FILES}; i+=1))
 do
-  if dd if=/dev/urandom of=$DIRECTORY/ossperf-testfile$i.txt bs=4096 count=$(($SIZE_FILES/4096) ; then
+  if dd if=/dev/urandom of=$DIRECTORY/ossperf-testfile$i.txt bs=4096 count=$(($SIZE_FILES/4096)) ; then
     echo -e "${GREEN}[OK] File with random content has been created.${NC}"
   else
     echo -e "${RED}[ERROR] Unable to create the file.${NC}" && exit 1
