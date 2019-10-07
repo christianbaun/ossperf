@@ -7,8 +7,8 @@
 # contributors: Marius Wernicke, Brian_P, agracie
 # url:          https://github.com/christianbaun/ossperf
 # license:      GPLv3
-# date:         September 27th 2019
-# version:      3.62
+# date:         October 6th 2019
+# version:      3.63
 # bash_version: 4.4.12(1)-release
 # requires:     md5sum (tested with version 8.26),
 #               bc (tested with version 1.06.95),
@@ -42,7 +42,7 @@ Arguments:
 -z : use the Azure CLI instead of the S3 API (this requires the python client for the Azure CLI and the environment variables AZURE_STORAGE_ACCOUNT and AZURE_STORAGE_ACCESS_KEY)
 -g : use the Google Cloud Storage CLI instead of the s3cmd (this requires the python client for the Google API)
 -l : use a specific site (location) for the bucket. This is supported e.g. by the AWS S3 and Google Cloud Storage
--r : use the s4cmd client. It can only interact with the AWS S3 service.  The tool uses the ~/.s3cfg configuration file if it exists. Otherwise it will use the content of the environment variables S3_ACCESS_KEY and S3_SECRET_KEY to access the AWS S3 service
+-r : use the s4cmd client. It can only interact with the AWS S3 service.  The tool uses the ~/.s3cfg configuration file if it exists. Otherwise it will use the content of the environment variables S3_ACCESS_KEY and S3_SECRET_KEY to access the AWS S3 service. For services that are not AWS S3, it is required to provide the endpoint-url parameter with the IP and Port addresses of the service, so please provide this as additional parameter: http://<IP>:<PORT>
 -k : keep the local files and the directory afterwards (do not clean up)
 -p : upload and download the files in parallel
 -o : appended the results to a local file results.csv
@@ -80,6 +80,7 @@ PARALLEL=0
 LIST_OF_FILES=
 OUTPUT_FILE=0
 S4CMD_CLIENT=0
+S4CMD_CLIENT_ENDPOINT_URL=
 S3PERF_CLIENT=0
 
 RED='\033[0;31m'          # Red color
@@ -89,7 +90,7 @@ YELLOW='\033[0;33m'       # Yellow color
 BLUE='\033[0;34m'         # Blue color
 WHITE='\033[0;37m'        # White color
 
-while getopts "hn:s:b:uam:zgl:rkpo" ARG ; do
+while getopts "hn:s:b:uam:zgl:r:kpo" ARG ; do
   case $ARG in
     h) usage ;;
     n) NUM_FILES=${OPTARG} ;;
@@ -105,7 +106,8 @@ while getopts "hn:s:b:uam:zgl:rkpo" ARG ; do
     g) GOOGLE_API=1 ;;
     l) BUCKET_LOCATION=1 
        BUCKET_LOCATION_SITE=${OPTARG} ;;
-    r) S4CMD_CLIENT=1 ;;
+    r) S4CMD_CLIENT=1 
+       S4CMD_CLIENT_ENDPOINT_URL=${OPTARG} ;;
     k) NOT_CLEAN_UP=1 ;;
     p) PARALLEL=1 ;;
     o) OUTPUT_FILE=1 ;;
@@ -235,11 +237,12 @@ fi
 if [ "$S4CMD_CLIENT" -eq 1 ] ; then
 # ... the script needs to check, if the command line tool s4cmd is installed
   if ! [ -x "$(command -v s4cmd)" ]; then
-    echo -e "${RED}[ERROR] If the s4cmd shall be used instead of s3cmd, it need to be installed and configured first. Please install it.\nThe installation is well documented here:${NC} https://github.com/bloomreach/s4cmd \nThis tool can only interact with the AWS S3 service.\nThe tool uses the ~/.s3cfg configuration file if it exists.\nOtherwise it will use the content of the environment variables\nS3_ACCESS_KEY and S3_SECRET_KEY to access the AWS S3 service."
+    echo -e "${RED}[ERROR] If the s4cmd shall be used instead of s3cmd, it need to be installed and configured first. Please install it.\nThe installation is well documented here:${NC} https://github.com/bloomreach/s4cmd \nThis tool can only interact with the AWS S3 service.\nThe tool uses the ~/.s3cfg configuration file if it exists.\nOtherwise it will use the content of the environment variables\nS3_ACCESS_KEY and S3_SECRET_KEY to access the AWS S3 service.\nFor services that are not AWS S3, it is required to provide the endpoint-url\n parameter with the IP and Port addresses of the service, so please provide this as additional parameter:\nhttp://<IP>:<PORT>"
     exit 1
   else
     echo -e "${YELLOW}[INFO] The s4cmd client has been found on this system.${NC}"
     s4cmd --version
+    echo -e "${YELLOW}[INFO] But because s4cmd does not implemnt the feature of earsing buckets,it is not supported by ossperf up to now\nhttps://github.com/bloomreach/s4cmd/issues/164.${NC}" && exit 1
   fi
 fi
 
@@ -354,13 +357,29 @@ elif [ "$GOOGLE_API" -eq 1 ] ; then
   else
     echo -e "${RED}[ERROR] Unable to access the storage service via the tool gsutil.${NC}" && exit 1
   fi
-elif [ "$S4CMD_CLIENT" -eq 1 ] ; then
-  # use the S3 API with s4cmd
-  if s4cmd ls ; then
-    echo -e "${GREEN}[OK] The storage service can be accessed via the tool s4cmd.${NC}"
-  else
-    echo -e "${RED}[ERROR] Unable to access the storage service via the tool s4cmd.${NC}" && exit 1
-  fi
+# elif [ "$S4CMD_CLIENT" -eq 1 ] ; then
+#   # use the S3 API with s4cmd
+#   #
+#   # If the optional parameter $S4CMD_CLIENT_ENDPOINT_URL with the IP and Port number 
+#   # of an S3-compatible storage service is not set (variable is empty), it is 
+#   # (opefully) AWS S3...
+#   if [ -z "$S4CMD_CLIENT_ENDPOINT_URL" ] ; then
+#     # Check if fetching the list of buckets works with s4cmd (on AWS S3)
+#     if s4cmd ls ; then
+#       echo -e "${GREEN}[OK] The storage service can be accessed via the tool s4cmd.${NC}"
+#     else
+#       echo -e "${RED}[ERROR] Unable to access the storage service via the tool s4cmd.${NC}" && exit 1
+#     fi
+#   # If the optional parameter $S4CMD_CLIENT_ENDPOINT_URL with the IP and Port number 
+#   # of an S3-compatible storage service is set (variable is not empty)...
+#   else
+#     # Check if fetching the list of buckets works with s4cmd
+#     if s4cmd --endpoint-url=$S4CMD_CLIENT_ENDPOINT_URL ls ; then
+#       echo -e "${GREEN}[OK] The storage service can be accessed via the tool s4cmd.${NC}"
+#     else
+#       echo -e "${RED}[ERROR] Unable to access the storage service via the tool s4cmd.${NC}" && exit 1
+#     fi
+#   fi
 else
   # use the S3 API with s3cmd
   if s3cmd ls ; then
@@ -454,24 +473,41 @@ elif [ "$GOOGLE_API" -eq 1 ] ; then
       echo -e "${RED}[ERROR] Unable to create the bucket (container) ${BUCKET}.${NC}" && exit 1
     fi
   fi
-elif [ "$S4CMD_CLIENT" -eq 1 ] ; then
-  # use the S3 API with s4cmd
-  if [ "$BUCKET_LOCATION" -eq 1 ] ; then
-    # If a specific site (location) for the bucket has been specified via command line parameter
-    if s4cmd mb s3://$BUCKET ; then
-      echo -e "${GREEN}[OK] Bucket ${BUCKET} has been created.${NC}"
-      echo -e "${YELLOW}[INFO] The tool s4cmd has no command line parameter to specify the site (location) of a bucket.\nTherefore, the bucket has been created in the default region.\nIt is possible to specify the default region with the environment variable AWS_DEFAULT_REGION.${NC}\nexport AWS_DEFAULT_REGION=<region>"
-    else
-      echo -e "${RED}[ERROR] Unable to create the bucket ${BUCKET}.${NC}" && exit 1
-    fi
-  else
-    # If no specific site (location) for the bucket has been specified via command line parameter
-    if s4cmd mb s3://$BUCKET ; then
-      echo -e "${GREEN}[OK] Bucket ${BUCKET} has been created.${NC}"
-    else
-      echo -e "${RED}[ERROR] Unable to create the bucket ${BUCKET}.${NC}" && exit 1
-    fi
-  fi
+# elif [ "$S4CMD_CLIENT" -eq 1 ] ; then
+#   # use the S3 API with s4cmd
+#   if [ "$BUCKET_LOCATION" -eq 1 ] ; then
+#     # If a specific site (location) for the bucket has been specified via command line parameter
+#     if s4cmd mb s3://$BUCKET ; then
+#       echo -e "${GREEN}[OK] Bucket ${BUCKET} has been created.${NC}"
+#       echo -e "${YELLOW}[INFO] The tool s4cmd has no command line parameter to specify the site (location) of a bucket.\nTherefore, the bucket has been created in the default region.\nIt is possible to specify the default region with the environment variable AWS_DEFAULT_REGION.${NC}\nexport AWS_DEFAULT_REGION=<region>"
+#     else
+#       echo -e "${RED}[ERROR] Unable to create the bucket ${BUCKET}.${NC}" && exit 1
+#     fi
+#   else
+#     # If no specific site (location) for the bucket has been specified via command line parameter
+
+#     # If the optional parameter $S4CMD_CLIENT_ENDPOINT_URL with the IP and Port number 
+#     # of an S3-compatible storage service is not set (variable is empty), it is 
+#     # (opefully) AWS S3...
+#     if [ -z "$S4CMD_CLIENT_ENDPOINT_URL" ] ; then
+#       # Create the bucket with s4cmd (on AWS S3)
+#       if s4cmd mb s3://$BUCKET ; then
+#         echo -e "${GREEN}[OK] Bucket ${BUCKET} has been created.${NC}"
+#       else
+#         echo -e "${RED}[ERROR] Unable to create the bucket ${BUCKET}.${NC}" && exit 1
+#       fi
+#     # If the optional parameter $S4CMD_CLIENT_ENDPOINT_URL with the IP and Port number 
+#     # of an S3-compatible storage service is set (variable is not empty)...
+#     else
+#       # Create the bucket with s4cmd
+#       if s4cmd --endpoint-url=$S4CMD_CLIENT_ENDPOINT_URL mb s3://$BUCKET ; then
+#         echo -e "${GREEN}[OK] Bucket ${BUCKET} has been created.${NC}"
+#       else
+#         echo -e "${RED}[ERROR] Unable to create the bucket ${BUCKET}.${NC}" && exit 1
+#       fi
+#     fi
+
+#   fi
 else
   # use the S3 API with s3cmd
   if [ "$BUCKET_LOCATION" -eq 1 ] ; then
@@ -528,26 +564,26 @@ if [ "$S3PERF_CLIENT" -eq 1 ] ; then
   done
 fi
 
-# If we use the tool s4cmd...
-if [ "$S4CMD_CLIENT" -eq 1 ] ; then
-  # We shall check at least 5 times
-  LOOP_VARIABLE=5
-  # until LOOP_VARIABLE is greater than 0 
-  while [ $LOOP_VARIABLE -gt "0" ]; do 
-    # Check if the Bucket is accessible
-    if s4cmd ls s3://$BUCKET ; then
-      echo -e "${GREEN}[OK] The bucket is available.${NC}"
-      # Skip entire rest of loop.
-      break
-    else
-      echo -e "${YELLOW}[INFO] The bucket is not yet available!${NC}"
-      # Decrement variable
-      LOOP_VARIABLE=$((LOOP_VARIABLE-1))
-      # Wait a moment. 
-      sleep 1
-    fi
-  done
-fi
+# # If we use the tool s4cmd...
+# if [ "$S4CMD_CLIENT" -eq 1 ] ; then
+#   # We shall check at least 5 times
+#   LOOP_VARIABLE=5
+#   # until LOOP_VARIABLE is greater than 0 
+#   while [ $LOOP_VARIABLE -gt "0" ]; do 
+#     # Check if the Bucket is accessible
+#     if s4cmd ls s3://$BUCKET ; then
+#       echo -e "${GREEN}[OK] The bucket is available.${NC}"
+#       # Skip entire rest of loop.
+#       break
+#     else
+#       echo -e "${YELLOW}[INFO] The bucket is not yet available!${NC}"
+#       # Decrement variable
+#       LOOP_VARIABLE=$((LOOP_VARIABLE-1))
+#       # Wait a moment. 
+#       sleep 1
+#     fi
+#   done
+# fi
 
 # If we use the tool gsutil...
 if [ "$GOOGLE_API" -eq 1 ] ; then
