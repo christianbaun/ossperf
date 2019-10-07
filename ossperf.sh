@@ -35,15 +35,31 @@ Arguments:
 -h : show this message on screen
 -n : number of files to be created
 -s : size of the files to be created in bytes (max 16777216 = 16 MB)
--b : ossperf will create per default a new bucket ossperf-testbucket (or OSSPERF-TESTBUCKET, in case the argument -u is set). This is not a problem when private cloud deployments are investigated, but for public cloud scenarios it may become a problem, because object-based storage services implement a global bucket namespace. This means that all bucket names must be unique. With the argument -b <bucket> the users of ossperf have the freedom to specify the bucket name
--u : use upper-case letters for the bucket name (this is required for Nimbus Cumulus and S3ninja)
--a : use the Swift API and not the S3 API (this requires the python client for the Swift API and the environment variables ST_AUTH, ST_USER and ST_KEY)
--m : use the S3 API with the Minio Client (mc) instead of s3cmd. It is required to provide the alias of the mc configuration that shall be used
--z : use the Azure CLI instead of the S3 API (this requires the python client for the Azure CLI and the environment variables AZURE_STORAGE_ACCOUNT and AZURE_STORAGE_ACCESS_KEY)
--g : use the Google Cloud Storage CLI instead of the s3cmd (this requires the python client for the Google API)
--w : use the AWS CLI instead of the s3cmd (this requires the installation and configuration of the aws cli client)
--l : use a specific site (location) for the bucket. This is supported e.g. by the AWS S3 and Google Cloud Storage
--d : If the aws cli shall be used with an S3-compatible non-Amazon service, please specify with this parameter the endpoint-url
+-b : ossperf will create per default a new bucket ossperf-testbucket (or 
+     OSSPERF-TESTBUCKET, in case the argument -u is set). This is not a 
+     problem when private cloud deployments are investigated, but for 
+     public cloud scenarios it may become a problem, because object-based 
+     storage services implement a global bucket namespace. This means 
+     that all bucket names must be unique. With the argument -b <bucket> 
+     the users of ossperf have the freedom to specify the bucket name
+-u : use upper-case letters for the bucket name (this is required for Nimbus 
+     Cumulus and S3ninja)
+-a : use the Swift API and not the S3 API (this requires the python client 
+     for the Swift API and the environment variables ST_AUTH, ST_USER and 
+     ST_KEY)
+-m : use the S3 API with the Minio Client (mc) instead of s3cmd. It is 
+     required to provide the alias of the mc configuration that shall be used
+-z : use the Azure CLI instead of the S3 API (this requires the python client 
+     for the Azure CLI and the environment variables AZURE_STORAGE_ACCOUNT 
+     and AZURE_STORAGE_ACCESS_KEY)
+-g : use the Google Cloud Storage CLI instead of the s3cmd (this requires
+     the python client for the Google API)
+-w : use the AWS CLI instead of the s3cmd (this requires the installation 
+     and configuration of the aws cli client)
+-l : use a specific site (location) for the bucket. This is supported e.g. 
+     by the AWS S3 and Google Cloud Storage
+-d : If the aws cli shall be used with an S3-compatible non-Amazon service, 
+     please specify with this parameter the endpoint-url
 -k : keep the local files and the directory afterwards (do not clean up)
 -p : upload and download the files in parallel
 -o : appended the results to a local file results.csv
