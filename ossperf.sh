@@ -7,8 +7,8 @@
 # contributors: Marius Wernicke, Brian_P, agracie
 # url:          https://github.com/christianbaun/ossperf
 # license:      GPLv3
-# date:         October 6th 2019
-# version:      3.63
+# date:         October 7th 2019
+# version:      3.64
 # bash_version: 4.4.12(1)-release
 # requires:     md5sum (tested with version 8.26),
 #               bc (tested with version 1.06.95),
@@ -41,6 +41,7 @@ Arguments:
 -m : use the S3 API with the Minio Client (mc) instead of s3cmd. It is required to provide the alias of the mc configuration that shall be used
 -z : use the Azure CLI instead of the S3 API (this requires the python client for the Azure CLI and the environment variables AZURE_STORAGE_ACCOUNT and AZURE_STORAGE_ACCESS_KEY)
 -g : use the Google Cloud Storage CLI instead of the s3cmd (this requires the python client for the Google API)
+-w : use the AWS CLI instead of the s3cmd (this requires the installation and configuration of the aws cli client)
 -l : use a specific site (location) for the bucket. This is supported e.g. by the AWS S3 and Google Cloud Storage
 -r : use the s4cmd client. It can only interact with the AWS S3 service.  The tool uses the ~/.s3cfg configuration file if it exists. Otherwise it will use the content of the environment variables S3_ACCESS_KEY and S3_SECRET_KEY to access the AWS S3 service. For services that are not AWS S3, it is required to provide the endpoint-url parameter with the IP and Port addresses of the service, so please provide this as additional parameter: http://<IP>:<PORT>
 -k : keep the local files and the directory afterwards (do not clean up)
@@ -75,6 +76,7 @@ BUCKET_LOCATION=0
 BUCKET_LOCATION_SITE=
 AZURE_CLI=0
 GOOGLE_API=0
+AWS_CLI_API=0
 NOT_CLEAN_UP=0
 PARALLEL=0
 LIST_OF_FILES=
@@ -90,7 +92,7 @@ YELLOW='\033[0;33m'       # Yellow color
 BLUE='\033[0;34m'         # Blue color
 WHITE='\033[0;37m'        # White color
 
-while getopts "hn:s:b:uam:zgl:r:kpo" ARG ; do
+while getopts "hn:s:b:uam:zgwl:r:kpo" ARG ; do
   case $ARG in
     h) usage ;;
     n) NUM_FILES=${OPTARG} ;;
@@ -104,6 +106,7 @@ while getopts "hn:s:b:uam:zgl:r:kpo" ARG ; do
        MINIO_CLIENT_ALIAS=${OPTARG} ;;
     z) AZURE_CLI=1 ;;
     g) GOOGLE_API=1 ;;
+    w) AWS_CLI_API=1 ;;
     l) BUCKET_LOCATION=1 
        BUCKET_LOCATION_SITE=${OPTARG} ;;
     r) S4CMD_CLIENT=1 
@@ -182,6 +185,18 @@ if [ "$MINIO_CLIENT" -eq 1 ] ; then
     mc version | grep Version 
   fi
 fi
+
+if [ "$AWS_CLI_API" -eq 1 ] ; then
+# ... the script needs to check, if the command line tool aws is installed
+  if ! [ -x "$(command -v aws)" ]; then
+    echo -e "${RED}[ERROR] If the AWS CLI Client (aws) shall be used instead of s3cmd, it need to be installed and configured first. Please install it.\nThe installation and configuration is well documented here:${NC} https://github.com/aws/aws-cli"
+    exit 1
+  else
+    echo -e "${YELLOW}[INFO] The AWS CLI Client (aws) has been found on this system.${NC}"
+    aws --version 
+  fi
+fi
+
 
 # Only if the user wants to use the Swift API and not the S3 API
 if [ "$SWIFT_API" -eq 1 ] ; then
@@ -357,6 +372,13 @@ elif [ "$GOOGLE_API" -eq 1 ] ; then
   else
     echo -e "${RED}[ERROR] Unable to access the storage service via the tool gsutil.${NC}" && exit 1
   fi
+elif [ "$AWS_CLI_API" -eq 1 ] ; then
+  # use the AWS CLI
+  if aws s3 ls ; then
+    echo -e "${GREEN}[OK] The storage service can be accessed via the tool aws.${NC}"
+  else
+    echo -e "${RED}[ERROR] Unable to access the storage service via the tool aws.${NC}" && exit 1
+  fi
 # elif [ "$S4CMD_CLIENT" -eq 1 ] ; then
 #   # use the S3 API with s4cmd
 #   #
@@ -472,6 +494,13 @@ elif [ "$GOOGLE_API" -eq 1 ] ; then
     else
       echo -e "${RED}[ERROR] Unable to create the bucket (container) ${BUCKET}.${NC}" && exit 1
     fi
+  fi
+elif [ "$AWS_CLI_API" -eq 1 ] ; then
+  # use the AWS CLI
+  if aws s3 mb s3://$BUCKET ; then
+    echo -e "${GREEN}[OK] Bucket ${BUCKET} has been created.${NC}"
+  else
+    echo -e "${RED}[ERROR] Unable to create the bucket (container) ${BUCKET}.${NC}" && exit 1
   fi
 # elif [ "$S4CMD_CLIENT" -eq 1 ] ; then
 #   # use the S3 API with s4cmd
@@ -606,6 +635,28 @@ if [ "$GOOGLE_API" -eq 1 ] ; then
   done
 fi
 
+# If we use the tool aws...
+if [ "$AWS_CLI_API" -eq 1 ] ; then
+  # We shall check at least 5 times
+  LOOP_VARIABLE=5
+  # until LOOP_VARIABLE is greater than 0 
+  while [ $LOOP_VARIABLE -gt "0" ]; do 
+    # Check if the Bucket is accessible
+    if aws s3 ls s3://$BUCKET ; then
+      echo -e "${GREEN}[OK] The bucket is available.${NC}"
+      # Skip entire rest of loop.
+      break
+    else
+      echo -e "${YELLOW}[INFO] The bucket is not yet available!${NC}"
+      # Decrement variable
+      LOOP_VARIABLE=$((LOOP_VARIABLE-1))
+      # Wait a moment. 
+      sleep 1
+    fi
+  done
+fi
+
+
 # If we use the tool mc...
 if [ "$MINIO_CLIENT" -eq 1 ] ; then
   # We shall check at least 5 times
@@ -626,6 +677,7 @@ if [ "$MINIO_CLIENT" -eq 1 ] ; then
     fi
   done
 fi
+
 
 
 # Start of the 2nd time measurement
@@ -797,9 +849,9 @@ elif [ "$GOOGLE_API" -eq 1 ] ; then
 else
   # use the S3 API with s3cmd
   if s3cmd ls s3://$BUCKET ; then
-    echo -e "${GREEN}[OK] The list of objects inside ${BUCKET} has been fetched.${NC}"
+    echo -e "${GREEN}[OK] The list of objects inside ${BUCKET} has been fetched with s3cmd.${NC}"
   else
-    echo -e "${RED}[ERROR] Unable to fetch the list of objects inside ${BUCKET}.${NC}" && exit 1
+    echo -e "${RED}[ERROR] Unable to fetch the list of objects inside ${BUCKET} with s3cmd.${NC}" && exit 1
   fi
 fi
 
@@ -831,45 +883,55 @@ if [ "$PARALLEL" -eq 1 ] ; then
     # in order to keep the code simple, ossperf uses the parallel command here too.
     # This removes the subfolder name(s) in the output of find: -type f -printf  "%f\n"
     if find $DIRECTORY/*.txt -type f -printf  "%f\n" | parallel swift download --object-threads=1 $BUCKET testfiles/{} ; then
-      echo -e "${GREEN}[OK] Files have been downloaded.${NC}"
+      echo -e "${GREEN}[OK] Files have been downloaded with swift.${NC}"
     else
-      echo -e "${RED}[ERROR] Unable to download the files.${NC}" && exit 1
+      echo -e "${RED}[ERROR] Unable to download the files with swift.${NC}" && exit 1
     fi
   elif [ "$MINIO_CLIENT" -eq 1 ] ; then
   # use the S3 API with mc
     # Download files in parallel
     # This removes the subfolder name(s) in the output of find: -type f -printf  "%f\n"
     if find $DIRECTORY/*.txt -type f -printf  "%f\n" | parallel mc cp $MINIO_CLIENT_ALIAS/$BUCKET/{} $DIRECTORY  ; then
-      echo -e "${GREEN}[OK] Files have been downloaded.${NC}"
+      echo -e "${GREEN}[OK] Files have been downloaded with mc.${NC}"
     else
-      echo -e "${RED}[ERROR] Unable to upload the files.${NC}" && exit 1
+      echo -e "${RED}[ERROR] Unable to upload the files with mc.${NC}" && exit 1
     fi
   elif [ "$AZURE_CLI" -eq 1 ] ; then
   # use the Azure CLI
     # Download files in parallel
     # The Azure CLI download in parallel per default and can't use GNU Parallel.
     if find $DIRECTORY/*.txt | az storage blob download-batch --destination $DIRECTORY/ --source $BUCKET ; then
-      echo -e "${GREEN}[OK] Files have been downloaded.${NC}"
+      echo -e "${GREEN}[OK] Files have been downloaded with az.${NC}"
     else
-      echo -e "${RED}[ERROR] Unable to downloaded. the files." && exit 1
+      echo -e "${RED}[ERROR] Unable to downloaded. the files with az." && exit 1
     fi
   elif [ "$GOOGLE_API" -eq 1 ] ; then
   # use the Google API
     # Download files in parallel
-    # The Google API download in parallel per -m and can't use GNU Parallel.
+    # The Google API downloads in parallel with parameter -m and can't use GNU Parallel.
     if find $DIRECTORY/*.txt | gsutil -m cp -r gs://$BUCKET $DIRECTORY/ ; then
-      echo -e "${GREEN}[OK] Files have been downloaded.${NC}"
+      echo -e "${GREEN}[OK] Files have been downloaded with gsutil.${NC}"
     else
-      echo -e "${RED}[ERROR] Unable to downloaded. the files.${NC}" && exit 1
+      echo -e "${RED}[ERROR] Unable to download the files with gsutil.${NC}" && exit 1
+    fi
+  elif [ "$AWS_CLI_API" -eq 1 ] ; then
+  # use the AWS CLI
+    # Download files in parallel
+    # The syntax is: aws s3 cp s3://<BUCKET>/<FILE> <LOCALFILE>
+    # This removes the subfolder name(s) in the output of find: -type f -printf  "%f\n"
+    if find ${DIRECTORY}/*.txt -type f -printf "%f\n" | parallel aws s3 cp s3://$BUCKET/{} $DIRECTORY/{} ; then
+      echo -e "${GREEN}[OK] Files have been downloaded with aws.${NC}"
+    else
+      echo -e "${RED}[ERROR] Unable to download the files with aws.${NC}" && exit 1
     fi
   else
   # use the S3 API with s3cmd
     # Download files in parallel
     # This removes the subfolder name(s) in the output of find: -type f -printf  "%f\n"
     if find ${DIRECTORY}/*.txt -type f -printf "%f\n" | parallel s3cmd get --force s3://$BUCKET/{} $DIRECTORY/ ; then
-      echo -e "${GREEN}[OK] Files have been downloaded.${NC}"
+      echo -e "${GREEN}[OK] Files have been downloaded with s3cmd.${NC}"
     else
-      echo -e "${RED}[ERROR] Unable to download the files.${NC}" && exit 1
+      echo -e "${RED}[ERROR] Unable to download the files with s3cmd.${NC}" && exit 1
     fi
   fi
 else
@@ -877,9 +939,9 @@ else
   if [ "$SWIFT_API" -eq 1 ] ; then
     # Download files sequentially
     if swift download --object-threads=1 $BUCKET $DIRECTORY/*.txt ; then
-      echo -e "${GREEN}[OK] Files have been downloaded.${NC}"
+      echo -e "${GREEN}[OK] Files have been downloaded with swift.${NC}"
     else
-      echo -e "${RED}[ERROR] Unable to download the files.${NC}" && exit 1
+      echo -e "${RED}[ERROR] Unable to download the files with swift.${NC}" && exit 1
     fi
   elif [ "$MINIO_CLIENT" -eq 1 ] ; then
   # use the S3 API with mc
@@ -891,33 +953,41 @@ else
       # remove the subfolder.
       mv $DIRECTORY/$BUCKET/*.txt $DIRECTORY
       rmdir $DIRECTORY/$BUCKET
-      echo -e "${GREEN}[OK] Files have been downloaded.${NC}"
+      echo -e "${GREEN}[OK] Files have been downloaded with mc.${NC}"
     else
-      echo -e "${RED}[ERROR] Unable to download the files.${NC}" && exit 1
+      echo -e "${RED}[ERROR] Unable to download the files with mc.${NC}" && exit 1
     fi
   elif [ "$AZURE_CLI" -eq 1 ] ; then
   # use the Azure CLI
     # Download files sequentially
     if az storage blob download-batch --destination $DIRECTORY/ --source $BUCKET ; then
-      echo -e "${GREEN}[OK] Files have been downloaded.${NC}"
+      echo -e "${GREEN}[OK] Files have been downloaded with az.${NC}"
     else
-      echo -e "${RED}[ERROR] Unable to download the files.${NC}" && exit 1
+      echo -e "${RED}[ERROR] Unable to download the files with az.${NC}" && exit 1
     fi
   elif [ "$GOOGLE_API" -eq 1 ] ; then
   # use the Google API
     # Download files sequentially
     if gsutil cp -r gs://$BUCKET/*.txt $DIRECTORY/ ; then
-      echo -e "${GREEN}[OK] Files have been downloaded.${NC}"
+      echo -e "${GREEN}[OK] Files have been downloaded with gsutil.${NC}"
     else
-      echo -e "${RED}[ERROR] Unable to downloaded. the files.${NC}" && exit 1
+      echo -e "${RED}[ERROR] Unable to download the files with gsutil.${NC}" && exit 1
+    fi
+  elif [ "$AWS_CLI_API" -eq 1 ] ; then
+  # use the AWS CLI
+    # Download files sequentially
+    if aws s3 cp s3://$BUCKET $DIRECTORY --recursive ; then
+      echo -e "${GREEN}[OK] Files have been downloaded with aws.${NC}"
+    else
+      echo -e "${RED}[ERROR] Unable to download the files with aws.${NC}" && exit 1
     fi
   else
   # use the S3 API with s3cmd
     # Download files sequentially
     if s3cmd get --force s3://$BUCKET/*.txt $DIRECTORY/ ; then
-      echo -e "${GREEN}[OK] Files have been downloaded.${NC}"
+      echo -e "${GREEN}[OK] Files have been downloaded with s3cmd.${NC}"
     else
-      echo -e "${RED}[ERROR] Unable to download the files.${NC}" && exit 1
+      echo -e "${RED}[ERROR] Unable to download the files with s3cmd.${NC}" && exit 1
     fi
   fi
 fi
@@ -967,18 +1037,18 @@ if [ "$PARALLEL" -eq 1 ] ; then
     # The swift client can erase in parallel (and does so per default) but in order to keep the code simple,
     # ossperf uses the parallel command here too.
     if find $DIRECTORY/*.txt | parallel swift delete --object-threads=1 $BUCKET {} ; then
-      echo -e "${GREEN}[OK] Files inside the bucket (container) ${BUCKET} have been erased.${NC}"
+      echo -e "${GREEN}[OK] Files inside the bucket (container) ${BUCKET} have been erased with swift.${NC}"
     else
-      echo -e "${RED}[ERROR] Unable to erase the files inside the bucket (container) ${BUCKET}.${NC}" && exit 1
+      echo -e "${RED}[ERROR] Unable to erase the files inside the bucket (container) ${BUCKET} with swift.${NC}" && exit 1
     fi
   elif [ "$MINIO_CLIENT" -eq 1 ] ; then
   # use the S3 API with mc
     # Erase files (objects) inside the bucket and the bucket itself sequentially!!!
     # Up to now it is impossible to erase just the files inside a bucket
     if mc rm -r --force $MINIO_CLIENT_ALIAS/$BUCKET  ; then
-      echo -e "${GREEN}[OK] Files inside the bucket ${BUCKET} have been erased.${NC}"
+      echo -e "${GREEN}[OK] Files inside the bucket ${BUCKET} have been erased with mc.${NC}"
     else
-      echo -e "${RED}[ERROR] Unable to erase the files inside the bucket ${BUCKET}.${NC}" && exit 1
+      echo -e "${RED}[ERROR] Unable to erase the files inside the bucket ${BUCKET} with mc.${NC}" && exit 1
     fi
   elif [ "$AZURE_CLI" -eq 1 ] ; then
   # use the Azure CLI
@@ -986,27 +1056,27 @@ if [ "$PARALLEL" -eq 1 ] ; then
     # The Azure CLI delete in parallel per default and can't use GNU Parallel.
     for i in `az storage blob list --container-name $BUCKET --output table | awk '{print $1}'| sed '1,2d' | sed '/^$/d'` ; do
       if az storage blob delete --name $i --container-name $BUCKET >/dev/null ; then
-        echo -e "${GREEN}[OK] File $i inside the $BUCKET have been erased.${NC}"
+        echo -e "${GREEN}[OK] File $i inside the $BUCKET have been erased with az.${NC}"
       else
-        echo -e "${RED}[ERROR] Unable to erase the file $i inside the  $BUCKET.${NC}" && exit 1
+        echo -e "${RED}[ERROR] Unable to erase the file $i inside the $BUCKET with az.${NC}" && exit 1
       fi
     done
   elif [ "$GOOGLE_API" -eq 1 ] ; then
   # use the Google API
     # The Google API delete in parallel per -m and can't use GNU Parallel.
     if gsutil -m rm gs://$BUCKET/* ; then
-      echo -e "${GREEN}[OK] Files inside the bucket (container) ${BUCKET} have been erased.${NC}"
+      echo -e "${GREEN}[OK] Files inside the bucket (container) ${BUCKET} have been erased  with gsutil.${NC}"
     else
-      echo -e "${RED}[ERROR] Unable to erase the files inside the bucket (container) ${BUCKET}.${NC}" && exit 1
+      echo -e "${RED}[ERROR] Unable to erase the files inside the bucket (container) ${BUCKET}  with gsutil.${NC}" && exit 1
     fi
   else
   # use the S3 API with s3cmd
     #  Erase files (objects) inside the bucket in parallel
     # -type f -printf "%f\n" gives back just the filename and not the folder information
     if find $DIRECTORY/*.txt -type f -printf "%f\n" | parallel s3cmd del s3://$BUCKET/{} ; then
-      echo -e "${GREEN}[OK] Files inside the bucket ${BUCKET} have been erased.${NC}"
+      echo -e "${GREEN}[OK] Files inside the bucket ${BUCKET} have been erased with s3cmd.${NC}"
     else
-      echo -e "${RED}[ERROR] Unable to erase the files inside the bucket ${BUCKET}.${NC}" && exit 1
+      echo -e "${RED}[ERROR] Unable to erase the files inside the bucket ${BUCKET} with s3cmd.${NC}" && exit 1
     fi
   fi
 else
@@ -1014,44 +1084,52 @@ else
   if [ "$SWIFT_API" -eq 1 ] ; then
     # Erase files (objects) inside the bucket sequentially
     if swift delete --object-threads=1 $BUCKET $DIRECTORY/*.txt ; then
-      echo -e "${GREEN}[OK] Files inside the bucket (container) ${BUCKET} have been erased.${NC}"
+      echo -e "${GREEN}[OK] Files inside the bucket (container) ${BUCKET} have been erased  with swift.${NC}"
     else
-      echo -e "${RED}[ERROR] Unable to erase the files inside the bucket (container) ${BUCKET}.${NC}" && exit 1
+      echo -e "${RED}[ERROR] Unable to erase the files inside the bucket (container) ${BUCKET} with swift.${NC}" && exit 1
     fi
   elif [ "$MINIO_CLIENT" -eq 1 ] ; then
   # use the S3 API with mc
     # Erase files (objects) inside the bucket and the bucket itself sequentially
     # Up to now it is impossible to erase just the files inside a bucket
     if mc rm -r --force $MINIO_CLIENT_ALIAS/$BUCKET  ; then
-      echo -e "${GREEN}[OK] Files inside the bucket ${BUCKET} and the bucket itself have been erased.${NC}"
+      echo -e "${GREEN}[OK] Files inside the bucket ${BUCKET} and the bucket itself have been erased with mc.${NC}"
     else
-      echo -e "${RED}[ERROR] Unable to erase the files inside the bucket ${BUCKET}.${NC}" && exit 1
+      echo -e "${RED}[ERROR] Unable to erase the files inside the bucket ${BUCKET} with mc.${NC}" && exit 1
     fi
   elif [ "$AZURE_CLI" -eq 1 ] ; then
   # use the Azure CLI
     # Erase files (objects) inside the bucket sequentially
     for i in `az storage blob list --container-name $BUCKET --output table | awk '{print $1}'| sed '1,2d' | sed '/^$/d'` ; do
       if az storage blob delete --name $i --container-name $BUCKET >/dev/null ; then
-        echo -e "${GREEN}[OK] File $i inside the $BUCKET have been erased.${NC}"
+        echo -e "${GREEN}[OK] File $i inside the $BUCKET have been erased with az.${NC}"
       else
-        echo -e "${RED}[ERROR] Unable to erase the file $i inside the $BUCKET.${NC}" && exit 1
+        echo -e "${RED}[ERROR] Unable to erase the file $i inside the $BUCKET with az.${NC}" && exit 1
       fi
     done
   elif [ "$GOOGLE_API" -eq 1 ] ; then
   # use the Google API
     # Erase files (objects) inside the bucket sequentially
     if gsutil rm gs://$BUCKET/* ; then
-      echo -e "${GREEN}[OK] Files inside the bucket (container) ${BUCKET} have been erased.${NC}"
+      echo -e "${GREEN}[OK] Files inside the bucket (container) ${BUCKET} have been erased with gsutil.${NC}"
     else
-      echo -e "${RED}[ERROR] Unable to erase the files inside the bucket (container) ${BUCKET}.${NC}" && exit 1
+      echo -e "${RED}[ERROR] Unable to erase the files inside the bucket (container) ${BUCKET} with gsutil.${NC}" && exit 1
+    fi
+  elif [ "$AWS_CLI_API" -eq 1 ] ; then
+  # use the AWS CLI
+    # Erase files (objects) inside the bucket sequentially
+    if aws s3 rm s3://$BUCKET --recursive --include "*" ; then
+      echo -e "${GREEN}[OK] Files inside the bucket (container) ${BUCKET} have been erased with aws.${NC}"
+    else
+      echo -e "${RED}[ERROR] Unable to erase the files inside the bucket (container) ${BUCKET} with aws.${NC}" && exit 1
     fi
   else
   # use the S3 API with s3cmd
     # Erase files (objects) inside the bucket sequentially
     if s3cmd del s3://$BUCKET/* ; then
-      echo -e "${GREEN}[OK] Files inside the bucket ${BUCKET} have been erased.${NC}"
+      echo -e "${GREEN}[OK] Files inside the bucket ${BUCKET} have been erased with s3cmd.${NC}"
     else
-      echo -e "${RED}[ERROR] Unable to erase the files inside the bucket ${BUCKET}.${NC}" && exit 1
+      echo -e "${RED}[ERROR] Unable to erase the files inside the bucket ${BUCKET} with s3cmd.${NC}" && exit 1
     fi
   fi
 fi  
@@ -1100,11 +1178,11 @@ if [ "$MINIO_CLIENT" -eq 1 ] ; then
 
   # Create the bucket again in order to erase it in the next step
   if mc mb $MINIO_CLIENT_ALIAS/$BUCKET; then
-    echo -e "${GREEN}[OK] Bucket ${BUCKET} has been created again to erase it as next step.${NC}"
+    echo -e "${GREEN}[OK] Bucket ${BUCKET} has been created again with mc to erase it as next step.${NC}"
     # Wait a moment. Sometimes, the services cannot provide fresh created buckets this quick
     sleep 1
   else
-    echo -e "${RED}[ERROR] Unable to create the bucket ${BUCKET} again.${NC}" && exit 1
+    echo -e "${RED}[ERROR] Unable to create the bucket ${BUCKET} again with mc.${NC}" && exit 1
   fi
 fi
 
@@ -1122,37 +1200,44 @@ box_out 'Test 6: Erase the bucket / container'
 # use the Swift API
 if [ "$SWIFT_API" -eq 1 ] ; then
   if swift delete $BUCKET ; then
-    echo -e "${GREEN}[OK] Bucket (Container) ${BUCKET} has been erased.${NC}"
+    echo -e "${GREEN}[OK] Bucket (Container) ${BUCKET} has been erased with swift.${NC}"
   else
-    echo -e "${RED}[ERROR] Unable to erase the bucket (container) ${BUCKET}.${NC}" && exit 1
+    echo -e "${RED}[ERROR] Unable to erase the bucket (container) ${BUCKET} with swift.${NC}" && exit 1
   fi
 elif [ "$MINIO_CLIENT" -eq 1 ] ; then
   # use the S3 API with mc
   if mc rm $MINIO_CLIENT_ALIAS/$BUCKET; then
-    echo -e "${GREEN}[OK] Bucket ${BUCKET} has been erased.${NC}"
+    echo -e "${GREEN}[OK] Bucket ${BUCKET} has been erased with mc.${NC}"
   else
-    echo -e "${RED}[ERROR] Unable to erase the bucket ${BUCKET}.${NC}" && exit 1
+    echo -e "${RED}[ERROR] Unable to erase the bucket ${BUCKET} with mc.${NC}" && exit 1
   fi
 elif [ "$AZURE_CLI" -eq 1 ] ; then
   # use the Azure CLI
   if az storage container delete --name $BUCKET ; then
-    echo -e "${GREEN}[OK] Bucket (Container) ${BUCKET} has been erased.${NC}"
+    echo -e "${GREEN}[OK] Bucket (Container) ${BUCKET} has been erased with az.${NC}"
   else
-    echo -e "${RED}[ERROR] Unable to erase the bucket (container) ${BUCKET}.${NC}" && exit 1
+    echo -e "${RED}[ERROR] Unable to erase the bucket (container) ${BUCKET} with az.${NC}" && exit 1
   fi
 elif [ "$GOOGLE_API" -eq 1 ] ; then
   # use the Google API
   if gsutil rm -r gs://$BUCKET ; then
-   echo -e "${GREEN}[OK] Bucket (Container) ${BUCKET} has been erased.${NC}"
+   echo -e "${GREEN}[OK] Bucket (Container) ${BUCKET} has been erased with gsutil.${NC}"
   else
-    echo -e "${RED}[ERROR] Unable to erase the bucket (container) ${BUCKET}.${NC}" && exit 1
+    echo -e "${RED}[ERROR] Unable to erase the bucket (container) ${BUCKET} with gsutil.${NC}" && exit 1
+  fi
+elif [ "$AWS_CLI_API" -eq 1 ] ; then
+  # use the AWS CLI
+  if aws s3 rb s3://$BUCKET ; then
+   echo -e "${GREEN}[OK] Bucket (Container) ${BUCKET} has been erased with aws.${NC}"
+  else
+    echo -e "${RED}[ERROR] Unable to erase the bucket (container) ${BUCKET} with aws.${NC}" && exit 1
   fi
 else
   # use the S3 API with s3cmd
   if s3cmd rb --force --recursive s3://$BUCKET ; then
-    echo -e "${GREEN}[OK] Bucket ${BUCKET} has been erased.${NC}"
+    echo -e "${GREEN}[OK] Bucket ${BUCKET} has been erased with s3cmd.${NC}"
   else
-    echo -e "${RED}[ERROR] Unable to erase the bucket ${BUCKET}.${NC}" && exit 1
+    echo -e "${RED}[ERROR] Unable to erase the bucket ${BUCKET} with s3cmd.${NC}" && exit 1
   fi
 fi
 
