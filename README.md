@@ -23,7 +23,7 @@ Storage services tested with this tool are so far:
 
 ## Synopsis
 
-    ossperf.sh -n files -s size [-b <bucket>] [-u] [-a] [-m <alias>] [-z] [-g] [-w] [-l <location>] [-k] [-p] [-o]
+    ossperf.sh -n files -s size [-b <bucket>] [-u] [-a] [-m <alias>] [-z] [-g] [-w] [-l <location>] [-d <url>] [-k] [-p] [-o]
 
     This script analyzes the performance and data integrity of S3-compatible
     storage services 
@@ -40,6 +40,7 @@ Storage services tested with this tool are so far:
     -g : use the Google Cloud Storage CLI instead of the s3cmd (this requires the python client for the Google API)
     -w : use the AWS CLI instead of the s3cmd (this requires the installation and configuration of the aws cli client)
     -l : use a specific site (location) for the bucket. This is supported e.g. by the AWS S3 and Google Cloud Storage
+    -d : If the aws cli shall be used with an S3-compatible non-Amazon service, please specify with this parameter the endpoint-url
     -k : keep the local files and the directory afterwards (do not clean up)
     -p : upload and download the files in parallel
     -o : appended the results to a local file results.csv
@@ -57,7 +58,7 @@ These software packages must be installed:
 These software packages are optional:
 
 - [swift](https://github.com/openstack/python-swiftclient) -- Python client for the Swift API (tested with version 2.3.1)
-- [mc](https://github.com/minio/mc) -- Minio Client for the S3 API as replacement for s3cmd (tested with version 2017-06-15T03:38:43Z)
+- [mc](https://github.com/minio/mc) -- Minio Client for the S3 API (tested with version 2019-10-02T19:41:02Z)
 - [az](https://github.com/Azure/azure-cli) -- Python client for the Azure CLI (tested with version 2.0)
 - [gsutil](https://github.com/GoogleCloudPlatform/gsutil) -- Python client for the Google Cloud Storage as replacement for s3cmd (tested with version 4.27 and 4.38)
 - [aws](https://github.com/aws/aws-cli) -- AWS CLI client for the S3 API (tested with version 1.15.6)
