@@ -3,12 +3,12 @@
 # title:        ossperf.sh
 # description:  This script analyzes the performance and data integrity of 
 #               S3-compatible storage services 
-# author:       Dr. Christian Baun, Rosa Maria Spanou
-# contributors: Marius Wernicke, Brian_P, agracie
+# author:       Dr. Christian Baun
+# contributors: Rosa Maria Spanou, Marius Wernicke, Brian_P, agracie
 # url:          https://github.com/christianbaun/ossperf
 # license:      GPLv3
 # date:         October 7th 2019
-# version:      3.64
+# version:      3.7
 # bash_version: 4.4.12(1)-release
 # requires:     md5sum (tested with version 8.26),
 #               bc (tested with version 1.06.95),
@@ -27,7 +27,7 @@
 
 function usage
 {
-echo "$SCRIPT -n files -s size [-b <bucket>] [-u] [-a] [-m <alias>] [-z] [-g] [-k] [-l <location>] [-s] [-k] [-p] [-o]
+echo "$SCRIPT -n files -s size [-b <bucket>] [-u] [-a] [-m <alias>] [-z] [-g] [-w] [-l <location>] [-k] [-p] [-o]
 
 This script analyzes the performance and data integrity of S3-compatible
 storage services 
@@ -44,13 +44,19 @@ Arguments:
 -g : use the Google Cloud Storage CLI instead of the s3cmd (this requires the python client for the Google API)
 -w : use the AWS CLI instead of the s3cmd (this requires the installation and configuration of the aws cli client)
 -l : use a specific site (location) for the bucket. This is supported e.g. by the AWS S3 and Google Cloud Storage
--r : use the s4cmd client. It can only interact with the AWS S3 service.  The tool uses the ~/.s3cfg configuration file if it exists. Otherwise it will use the content of the environment variables S3_ACCESS_KEY and S3_SECRET_KEY to access the AWS S3 service. For services that are not AWS S3, it is required to provide the endpoint-url parameter with the IP and Port addresses of the service, so please provide this as additional parameter: http://<IP>:<PORT>
 -k : keep the local files and the directory afterwards (do not clean up)
 -p : upload and download the files in parallel
 -o : appended the results to a local file results.csv
 "
 exit 0
 }
+
+
+# # !!!! The s4cmd client is not supported up to now !!!!
+# -r : use the s4cmd client. It can only interact with the AWS S3 service.  The tool uses the ~/.s3cfg configuration file if it exists. Otherwise it will use the content of the environment variables S3_ACCESS_KEY and S3_SECRET_KEY to access the AWS S3 service. For services that are not AWS S3, it is required to provide the endpoint-url parameter with the IP and Port addresses of the service, so please provide this as additional parameter: http://<IP>:<PORT>
+# # !!!! The s4cmd client is not supported up to now !!!!
+
+
 
 function box_out()
 # https://unix.stackexchange.com/questions/70615/bash-script-echo-output-in-box

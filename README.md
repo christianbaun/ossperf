@@ -23,7 +23,10 @@ Storage services tested with this tool are so far:
 
 ## Synopsis
 
-    ossperf.sh -n files -s size [-b <bucket>] [-u] [-a] [-m <alias>] [-z] [-g] [-k] [-l <location>] [-p] [-o]
+    ossperf.sh -n files -s size [-b <bucket>] [-u] [-a] [-m <alias>] [-z] [-g] [-w] [-l <location>] [-k] [-p] [-o]
+
+    This script analyzes the performance and data integrity of S3-compatible
+    storage services 
 
     Arguments:
     -h : show this message on screen
@@ -35,6 +38,7 @@ Storage services tested with this tool are so far:
     -m : use the S3 API with the Minio Client (mc) instead of s3cmd. It is required to provide the alias of the mc configuration that shall be used
     -z : use the Azure CLI instead of the S3 API (this requires the python client for the Azure CLI and the environment variables AZURE_STORAGE_ACCOUNT and AZURE_STORAGE_ACCESS_KEY)
     -g : use the Google Cloud Storage CLI instead of the s3cmd (this requires the python client for the Google API)
+    -w : use the AWS CLI instead of the s3cmd (this requires the installation and configuration of the aws cli client)
     -l : use a specific site (location) for the bucket. This is supported e.g. by the AWS S3 and Google Cloud Storage
     -k : keep the local files and the directory afterwards (do not clean up)
     -p : upload and download the files in parallel
