@@ -13,12 +13,13 @@
 # requires:     md5sum (tested with version 8.26),
 #               bc (tested with version 1.06.95),
 #               s3cmd (tested with versions 1.5.0, 1.6.1 and 2.0.2),
-#               parallel (tested with version 20161222),
-#               swift -- Python client for the Swift API (tested with v2.3.1),
+#               parallel (tested with version 20161222)
+# optional      swift -- Python client for the Swift API (tested with v2.3.1),
 #               mc -- Minio Client for the S3 API as replacement for s3cmd 
 #                     (tested with v2017-06-15T03:38:43Z)
 #               az -- Python client for the Azure CLI (tested with v2.0),
 #               gsutil -- Python client for the Google API (tested with v4.27 and 4.38)
+#               aws -- AWS CLI client for the S3 API (tested with v1.15.6)
 # notes:        s3cmd need to be configured first via s3cmd --configure
 #               gsutil need to be configured first via gsutil config -a
 # example:      ./ossperf.sh -n 5 -s 1048576 # 5 files of 1 MB size each
@@ -123,7 +124,7 @@ done
 
 # If neither using the Swift client, the Minio client (mc), the Azure client (az), the s4cmd client 
 # or the Google storage client (gsutil) has been specified via command line parameter...
-if [[ "$MINIO_CLIENT" -ne 1  && "$AZURE_CLI" -ne 1 && "$S4CMD_CLIENT" -ne 1 && "$GOOGLE_API" -ne 1 && "$SWIFT_API" -ne 1 ]] ; then
+if [[ "$MINIO_CLIENT" -ne 1  && "$AZURE_CLI" -ne 1 && "$S4CMD_CLIENT" -ne 1 && "$AWS_CLI_API" -ne 1 && "$GOOGLE_API" -ne 1 && "$SWIFT_API" -ne 1 ]] ; then
    # ... then we use the command line client s3cmd. This is the default client of ossperf
    S3PERF_CLIENT=1
    echo -e "${YELLOW}[INFO] ossperf will use the tool s3cmd because no other client tool has been specified via command line parameter.${NC}"
@@ -460,47 +461,47 @@ box_out 'Test 1: Create a bucket / container'
 # use the Swift API
 if [ "$SWIFT_API" -eq 1 ] ; then
   if swift post $BUCKET ; then
-    echo -e "${GREEN}[OK] Bucket ${BUCKET} has been created.${NC}"
+    echo -e "${GREEN}[OK] Bucket ${BUCKET} has been created with swift.${NC}"
   else
-    echo -e "${RED}[ERROR] Unable to create the bucket (container) ${BUCKET}.${NC}" && exit 1
+    echo -e "${RED}[ERROR] Unable to create the bucket (container) ${BUCKET} with swift.${NC}" && exit 1
   fi
 elif [ "$MINIO_CLIENT" -eq 1 ] ; then
   # use the S3 API with mc
   if mc mb $MINIO_CLIENT_ALIAS/$BUCKET; then
-    echo -e "${GREEN}[OK] Bucket ${BUCKET} has been created.${NC}"
+    echo -e "${GREEN}[OK] Bucket ${BUCKET} has been created with mc.${NC}"
   else
-    echo -e "${RED}[ERROR] Unable to create the bucket ${BUCKET}.${NC}" && exit 1
+    echo -e "${RED}[ERROR] Unable to create the bucket ${BUCKET} with mc.${NC}" && exit 1
   fi
 elif [ "$AZURE_CLI" -eq 1 ] ; then
   # use the Azure CLI
   if az storage container create --name $BUCKET ; then
-    echo -e "${GREEN}[OK] Bucket ${BUCKET} has been created.${NC}"
+    echo -e "${GREEN}[OK] Bucket ${BUCKET} has been created with az.${NC}"
   else
-    echo -e "${RED}[ERROR] Unable to create the bucket (container) ${BUCKET}.${NC}" && exit 1
+    echo -e "${RED}[ERROR] Unable to create the bucket (container) ${BUCKET} with az.${NC}" && exit 1
   fi
 elif [ "$GOOGLE_API" -eq 1 ] ; then
   # use the Google API
   if [ "$BUCKET_LOCATION" -eq 1 ] ; then
     # If a specific site (location) for the bucket has been specified via command line parameter
     if gsutil mb -l $BUCKET_LOCATION_SITE gs://$BUCKET ; then
-      echo -e "${GREEN}[OK] Bucket ${BUCKET} has been created.${NC}"
+      echo -e "${GREEN}[OK] Bucket ${BUCKET} has been created with gsutil.${NC}"
     else
-      echo -e "${RED}[ERROR] Unable to create the bucket (container) ${BUCKET}.${NC}" && exit 1
+      echo -e "${RED}[ERROR] Unable to create the bucket (container) ${BUCKET} with gsutil.${NC}" && exit 1
     fi
   else
     # If no specific site (location) for the bucket has been specified via command line parameter
     if gsutil mb gs://$BUCKET ; then
-      echo -e "${GREEN}[OK] Bucket ${BUCKET} has been created.${NC}"
+      echo -e "${GREEN}[OK] Bucket ${BUCKET} has been created with gsutil.${NC}"
     else
-      echo -e "${RED}[ERROR] Unable to create the bucket (container) ${BUCKET}.${NC}" && exit 1
+      echo -e "${RED}[ERROR] Unable to create the bucket (container) ${BUCKET} with gsutil.${NC}" && exit 1
     fi
   fi
 elif [ "$AWS_CLI_API" -eq 1 ] ; then
   # use the AWS CLI
   if aws s3 mb s3://$BUCKET ; then
-    echo -e "${GREEN}[OK] Bucket ${BUCKET} has been created.${NC}"
+    echo -e "${GREEN}[OK] Bucket ${BUCKET} has been created with aws.${NC}"
   else
-    echo -e "${RED}[ERROR] Unable to create the bucket (container) ${BUCKET}.${NC}" && exit 1
+    echo -e "${RED}[ERROR] Unable to create the bucket (container) ${BUCKET} with aws.${NC}" && exit 1
   fi
 # elif [ "$S4CMD_CLIENT" -eq 1 ] ; then
 #   # use the S3 API with s4cmd
@@ -549,9 +550,9 @@ else
   else
     # If no specific site (location) for the bucket has been specified via command line parameter
     if s3cmd mb s3://$BUCKET ; then
-      echo -e "${GREEN}[OK] Bucket ${BUCKET} has been created.${NC}"
+      echo -e "${GREEN}[OK] Bucket ${BUCKET} has been created with s3cmd.${NC}"
     else
-      echo -e "${RED}[ERROR] Unable to create the bucket ${BUCKET}.${NC}" && exit 1
+      echo -e "${RED}[ERROR] Unable to create the bucket ${BUCKET} with s3cmd.${NC}" && exit 1
     fi
   fi
 fi
@@ -580,7 +581,7 @@ if [ "$S3PERF_CLIENT" -eq 1 ] ; then
   while [ $LOOP_VARIABLE -gt "0" ]; do 
     # Check if the Bucket is accessible
     if s3cmd ls s3://$BUCKET ; then
-      echo -e "${GREEN}[OK] The bucket is available.${NC}"
+      echo -e "${GREEN}[OK] The bucket is available (checked with s3cmd).${NC}"
       # Skip entire rest of loop.
       break
     else
@@ -622,7 +623,7 @@ if [ "$GOOGLE_API" -eq 1 ] ; then
   while [ $LOOP_VARIABLE -gt "0" ]; do 
     # Check if the Bucket is accessible
     if gsutil ls gs://$BUCKET ; then
-      echo -e "${GREEN}[OK] The bucket is available.${NC}"
+      echo -e "${GREEN}[OK] The bucket is available (checked with gsutil).${NC}"
       # Skip entire rest of loop.
       break
     else
@@ -643,7 +644,7 @@ if [ "$AWS_CLI_API" -eq 1 ] ; then
   while [ $LOOP_VARIABLE -gt "0" ]; do 
     # Check if the Bucket is accessible
     if aws s3 ls s3://$BUCKET ; then
-      echo -e "${GREEN}[OK] The bucket is available.${NC}"
+      echo -e "${GREEN}[OK] The bucket is available (checked with aws).${NC}"
       # Skip entire rest of loop.
       break
     else
@@ -665,7 +666,7 @@ if [ "$MINIO_CLIENT" -eq 1 ] ; then
   while [ $LOOP_VARIABLE -gt "0" ]; do 
     # Check if the Bucket is accessible
     if mc ls $MINIO_CLIENT_ALIAS/$BUCKET ; then
-      echo -e "${GREEN}[OK] The bucket is available.${NC}"
+      echo -e "${GREEN}[OK] The bucket is available (checked with mc).${NC}"
       # Skip entire rest of loop.
       break
     else
@@ -698,43 +699,52 @@ if [ "$PARALLEL" -eq 1 ] ; then
     # The swift client can upload in parallel (and does so per default) but in order to keep the code simple,
     # ossperf uses the parallel command here too.
     if find $DIRECTORY/*.txt | parallel swift upload --object-threads 1 $BUCKET {} ; then
-      echo -e "${GREEN}[OK] Files have been uploaded.${NC}"
+      echo -e "${GREEN}[OK] Files have been uploaded with swift.${NC}"
     else
-      echo -e "${RED}[ERROR] Unable to upload the files.${NC}" && exit 1
+      echo -e "${RED}[ERROR] Unable to upload the files with swift.${NC}" && exit 1
     fi    
   elif [ "$MINIO_CLIENT" -eq 1 ] ; then
   # use the S3 API with mc
     # Upload files in parallel
     if find $DIRECTORY/*.txt | parallel mc cp {} $MINIO_CLIENT_ALIAS/$BUCKET  ; then
-      echo -e "${GREEN}[OK] Files have been uploaded.${NC}"
+      echo -e "${GREEN}[OK] Files have been uploaded with mc.${NC}"
     else
-      echo -e "${RED}[ERROR] Unable to upload the files.${NC}" && exit 1
+      echo -e "${RED}[ERROR] Unable to upload the files with mc.${NC}" && exit 1
     fi
   elif [ "$AZURE_CLI" -eq 1 ] ; then
   # use the Azure CLI
   # The Azure CLI upload in parallel per default and can't use GNU Parallel.
     # Upload files in parallel
     if find $DIRECTORY/*.txt | az storage blob upload-batch --destination $BUCKET --source $DIRECTORY/ ; then
-      echo -e "${GREEN}[OK] Files have been uploaded.${NC}"
+      echo -e "${GREEN}[OK] Files have been uploaded with az.${NC}"
     else
-      echo -e "${RED}[ERROR] Unable to upload the files.${NC}" && exit 1
+      echo -e "${RED}[ERROR] Unable to upload the files with az.${NC}" && exit 1
     fi
   elif [ "$GOOGLE_API" -eq 1 ] ; then
   # use the Google API
   # The Google API upload in parallel per -m and can't use GNU Parallel.
     # Upload files in parallel
     if gsutil -m cp -r $DIRECTORY/*.txt gs://$BUCKET ; then
-      echo -e "${GREEN}[OK] Files have been uploaded.${NC}"
+      echo -e "${GREEN}[OK] Files have been uploaded with gsutil.${NC}"
     else
-      echo -e "${RED}[ERROR] Unable to upload the files.${NC}" && exit 1
+      echo -e "${RED}[ERROR] Unable to upload the files with gsutil.${NC}" && exit 1
+    fi
+  elif [ "$AWS_CLI_API" -eq 1 ] ; then
+  # use the AWS CLI
+    # Upload files in parallel
+    # This removes the subfolder name(s) in the output of find: -type f -printf  "%f\n"
+    if find $DIRECTORY/*.txt -type f -printf  "%f\n" | parallel aws s3 cp $DIRECTORY/{} s3://$BUCKET/{} ; then
+      echo -e "${GREEN}[OK] Files have been uploaded with aws.${NC}"
+    else
+      echo -e "${RED}[ERROR] Unable to upload the files with aws.${NC}" && exit 1
     fi
   else
   # use the S3 API with s3cmd
     # Upload files in parallel
     if find $DIRECTORY/*.txt | parallel s3cmd put {} s3://$BUCKET ; then
-      echo -e "${GREEN}[OK] Files have been uploaded.${NC}"
+      echo -e "${GREEN}[OK] Files have been uploaded with s3cmd.${NC}"
     else
-      echo -e "${RED}[ERROR] Unable to upload the files.${NC}" && exit 1
+      echo -e "${RED}[ERROR] Unable to upload the files with s3cmd.${NC}" && exit 1
     fi
   fi
 else
@@ -745,41 +755,49 @@ else
     # The swift client can upload in parallel (and does so per default) but in order to keep the code simple,
     # ossperf uses the parallel command here too.
     if swift upload --object-threads 1 $BUCKET $DIRECTORY/*.txt ; then
-      echo -e "${GREEN}[OK] Files have been uploaded.${NC}"
+      echo -e "${GREEN}[OK] Files have been uploaded with swift.${NC}"
     else
-      echo -e "${RED}[ERROR] Unable to upload the files.${NC}" && exit 1
+      echo -e "${RED}[ERROR] Unable to upload the files with swift.${NC}" && exit 1
     fi
   elif [ "$MINIO_CLIENT" -eq 1 ] ; then
   # use the S3 API with mc
     # Upload files sequentially
     if mc cp $DIRECTORY/*.txt $MINIO_CLIENT_ALIAS/$BUCKET ; then
-      echo -e "${GREEN}[OK] Files have been uploaded.${NC}"
+      echo -e "${GREEN}[OK] Files have been uploaded with mc.${NC}"
     else
-      echo -e "${RED}[ERROR] Unable to upload the files.${NC}" && exit 1
+      echo -e "${RED}[ERROR] Unable to upload the files with mc.${NC}" && exit 1
     fi
   elif [ "$AZURE_CLI" -eq 1 ] ; then
   # use the Azure CLI
     # Upload files sequentially
     if az storage blob upload-batch --destination $BUCKET --source $DIRECTORY/ ; then
-      echo -e "${GREEN}[OK] Files have been uploaded.${NC}"
+      echo -e "${GREEN}[OK] Files have been uploaded with az.${NC}"
     else
-      echo -e "${RED}[ERROR] Unable to upload the files.${NC}" && exit 1
+      echo -e "${RED}[ERROR] Unable to upload the files with az.${NC}" && exit 1
     fi
   elif [ "$GOOGLE_API" -eq 1 ] ; then
   # use the Google API
     # Upload files sequentially
     if gsutil cp -r $DIRECTORY/*.txt gs://$BUCKET ; then
-      echo -e "${GREEN}[OK] Files have been uploaded.${NC}"
+      echo -e "${GREEN}[OK] Files have been uploaded with gsutil.${NC}"
     else
-      echo -e "${RED}[ERROR] Unable to upload the files.${NC}" && exit 1
+      echo -e "${RED}[ERROR] Unable to upload the files with gsutil.${NC}" && exit 1
+    fi
+  elif [ "$AWS_CLI_API" -eq 1 ] ; then
+  # use the AWS CLI
+    # Upload files sequentially
+    if aws s3 cp $DIRECTORY/ s3://$BUCKET --recursive --exclude "*" --include "*.txt" ; then
+      echo -e "${GREEN}[OK] Files have been uploaded with aws.${NC}"
+    else
+      echo -e "${RED}[ERROR] Unable to upload the files with aws.${NC}" && exit 1
     fi
   else
   # use the S3 API with s3cmd
     # Upload files sequentially
     if s3cmd put $DIRECTORY/*.txt s3://$BUCKET ; then
-      echo -e "${GREEN}[OK] Files have been uploaded.${NC}"
+      echo -e "${GREEN}[OK] Files have been uploaded with s3cmd.${NC}"
     else
-      echo -e "${RED}[ERROR] Unable to upload the files.${NC}" && exit 1
+      echo -e "${RED}[ERROR] Unable to upload the files with s3cmd.${NC}" && exit 1
     fi
   fi
 fi
@@ -821,30 +839,37 @@ box_out 'Test 3: List files inside the bucket / container'
 # use the Swift API
 if [ "$SWIFT_API" -eq 1 ] ; then
   if swift list $BUCKET ; then
-    echo -e "${GREEN}[OK] The list of objects inside ${BUCKET} has been fetched.${NC}"
+    echo -e "${GREEN}[OK] The list of objects inside ${BUCKET} has been fetched with swift.${NC}"
   else
-    echo -e "${RED}[ERROR] Unable to fetch the list of objects inside ${BUCKET}.${NC}" && exit 1
+    echo -e "${RED}[ERROR] Unable to fetch the list of objects inside ${BUCKET} with swift.${NC}" && exit 1
   fi
 elif [ "$MINIO_CLIENT" -eq 1 ] ; then
   # use the S3 API with mc
   if mc ls $MINIO_CLIENT_ALIAS/$BUCKET; then
-    echo -e "${GREEN}[OK] The list of objects inside ${BUCKET} has been fetched.${NC}"
+    echo -e "${GREEN}[OK] The list of objects inside ${BUCKET} has been fetched with mc.${NC}"
   else
-    echo -e "${RED}[ERROR] Unable to fetch the list of objects inside ${BUCKET}.${NC}" && exit 1
+    echo -e "${RED}[ERROR] Unable to fetch the list of objects inside ${BUCKET} with mc.${NC}" && exit 1
   fi
 elif [ "$AZURE_CLI" -eq 1 ] ; then
   # use the Azure CLI
   if az storage blob list --container-name $BUCKET --output table ; then
-    echo -e "${GREEN}[OK] The list of objects inside ${BUCKET} has been fetched.${NC}"
+    echo -e "${GREEN}[OK] The list of objects inside ${BUCKET} has been fetched with az.${NC}"
   else
-    echo -e "${RED}[ERROR] Unable to fetch the list of objects inside ${BUCKET}.${NC}" && exit 1
+    echo -e "${RED}[ERROR] Unable to fetch the list of objects inside ${BUCKET} with az.${NC}" && exit 1
   fi
 elif [ "$GOOGLE_API" -eq 1 ] ; then
   # use the Google API
   if gsutil ls gs://$BUCKET ; then
-    echo -e "${GREEN}[OK] The list of objects inside ${BUCKET} has been fetched.${NC}"
+    echo -e "${GREEN}[OK] The list of objects inside ${BUCKET} has been fetched with gsutil.${NC}"
   else
-    echo -e "${RED}[ERROR] Unable to fetch the list of objects inside ${BUCKET}.${NC}" && exit 1
+    echo -e "${RED}[ERROR] Unable to fetch the list of objects inside ${BUCKET} with gsutil.${NC}" && exit 1
+  fi
+elif [ "$AWS_CLI_API" -eq 1 ] ; then
+  # use the AWS CLI
+  if aws s3 ls s3://$BUCKET ; then
+    echo -e "${GREEN}[OK] The list of objects inside ${BUCKET} has been fetched with aws.${NC}"
+  else
+    echo -e "${RED}[ERROR] Unable to fetch the list of objects inside ${BUCKET} with aws.${NC}" && exit 1
   fi
 else
   # use the S3 API with s3cmd
@@ -891,7 +916,7 @@ if [ "$PARALLEL" -eq 1 ] ; then
   # use the S3 API with mc
     # Download files in parallel
     # This removes the subfolder name(s) in the output of find: -type f -printf  "%f\n"
-    if find $DIRECTORY/*.txt -type f -printf  "%f\n" | parallel mc cp $MINIO_CLIENT_ALIAS/$BUCKET/{} $DIRECTORY  ; then
+    if find $DIRECTORY/*.txt -type f -printf  "%f\n" | parallel mc cp $MINIO_CLIENT_ALIAS/$BUCKET/{} $DIRECTORY ; then
       echo -e "${GREEN}[OK] Files have been downloaded with mc.${NC}"
     else
       echo -e "${RED}[ERROR] Unable to upload the files with mc.${NC}" && exit 1
