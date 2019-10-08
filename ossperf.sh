@@ -8,7 +8,7 @@
 # url:          https://github.com/christianbaun/ossperf
 # license:      GPLv3
 # date:         October 8th 2019
-# version:      3.8
+# version:      1.0
 # bash_version: 4.4.12(1)-release
 # requires:     md5sum (tested with version 8.26),
 #               bc (tested with version 1.06.95),
@@ -469,20 +469,24 @@ else
   fi
 fi
 
-
-
 # Check if the directory already exists
 # This is not a part of the benchmark!
 if [ -e ${DIRECTORY} ] ; then
   # Terminate the script, in case the directory already exists
-  echo -e "${RED}[ERROR] The directory ${DIRECTORY} already exists in the local directory!${NC}" && exit 1
-else
-  if mkdir ${DIRECTORY} ; then
-    # Create the directory if it does not already exist
-    echo -e "${GREEN}[OK] The directory ${DIRECTORY} has been created in the local directory.${NC}"
+  echo -e "${YELLOW}[INFO] The directory ${DIRECTORY} already exists in the local directory.${NC}"
+  if rm -rf ${DIRECTORY} ; then
+    echo -e "${GREEN}[OK] The old local directory ${DIRECTORY} has been erased.${NC}"
   else
-    echo -e "${RED}[ERROR] Unable to create the directory ${DIRECTORY} in the local directory.${NC}" && exit 1
+    echo -e "${RED}[ERROR] Unable to erase the local directory ${DIRECTORY}.${NC}" && exit 1
   fi
+fi
+
+# Create the directory
+# This is not a part of the benchmark!
+if mkdir ${DIRECTORY} ; then
+  echo -e "${GREEN}[OK] The local directory ${DIRECTORY} has been created.${NC}"
+else
+  echo -e "${RED}[ERROR] Unable to create the local directory ${DIRECTORY}.${NC}" && exit 1
 fi
 
 # Create files with random content of given size
