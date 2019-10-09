@@ -1,3 +1,5 @@
+[![License: GPLv3](https://img.shields.io/pypi/l/fpvgcc.svg)](http://www.gnu.de/documents/gpl-3.0.en.html)
+
 # OSSperf
 
 OSSperf is a lightweight command-line tool for analyzing the performance and data integrity of storage services that implement the S3 API, the Swift API, or the Azure Blob Storage API. The tool creates a user-defined number of files with random content and of a specified size inside a local directory. The tool creates a bucket, uploads and downloads the files, and afterward removes the bucket. The time required to carry out theses S3/Swift/Azure-related tasks is measured and printed out on the command line.
