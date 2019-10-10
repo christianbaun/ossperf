@@ -1,4 +1,5 @@
-[![License: GPLv3](https://img.shields.io/pypi/l/fpvgcc.svg)](http://www.gnu.de/documents/gpl-3.0.en.html)
+[![GPLv3 license](https://img.shields.io/badge/License-GPLv3-blue.svg)](http://perso.crans.org/besson/LICENSE.html)
+[![made-with-bash](https://img.shields.io/badge/-Made%20with%20Bash-1f425f.svg)](https://www.gnu.org/software/bash/)
 
 # OSSperf
 
