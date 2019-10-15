@@ -7,8 +7,8 @@
 # contributors: Rosa Maria Spanou, Marius Wernicke, Brian_P, agracie
 # url:          https://github.com/christianbaun/ossperf
 # license:      GPLv3
-# date:         October 8th 2019
-# version:      1.0
+# date:         October 15th 2019
+# version:      1.01
 # bash_version: 4.4.12(1)-release
 # requires:     md5sum (tested with version 8.26),
 #               bc (tested with version 1.06.95),
@@ -100,6 +100,7 @@ BUCKET_LOCATION_SITE=
 ENDPOINT_URL=0 
 ENDPOINT_URL_ADDRESS=
 AZURE_CLI=0
+S4CMD_CLIENT=0
 GOOGLE_API=0
 AWS_CLI_API=0
 NOT_CLEAN_UP=0
@@ -117,7 +118,7 @@ YELLOW='\033[0;33m'       # Yellow color
 BLUE='\033[0;34m'         # Blue color
 WHITE='\033[0;37m'        # White color
 
-while getopts "hn:s:b:uam:zgwl:d:r:kpo" ARG ; do
+while getopts "hn:s:b:uam:zgwrl:d:kpo" ARG ; do
   case $ARG in
     h) usage ;;
     n) NUM_FILES=${OPTARG} ;;
@@ -132,12 +133,11 @@ while getopts "hn:s:b:uam:zgwl:d:r:kpo" ARG ; do
     z) AZURE_CLI=1 ;;
     g) GOOGLE_API=1 ;;
     w) AWS_CLI_API=1 ;;
+    r) S4CMD_CLIENT=1 ;;
     l) BUCKET_LOCATION=1 
        BUCKET_LOCATION_SITE=${OPTARG} ;;
     d) ENDPOINT_URL=1 
        ENDPOINT_URL_ADDRESS=${OPTARG} ;;
-    r) S4CMD_CLIENT=1 
-       S4CMD_CLIENT_ENDPOINT_URL=${OPTARG} ;;
     k) NOT_CLEAN_UP=1 ;;
     p) PARALLEL=1 ;;
     o) OUTPUT_FILE=1 ;;
@@ -388,6 +388,8 @@ done
 # | Check that a storage service is accessible |
 # ----------------------------------------------
 # This is not a part of the benchmark!
+
+# <-=-=-=-> swift (start) <-=-=-=->
 # use the Swift API
 if [ "$SWIFT_API" -eq 1 ] ; then
   if swift list ; then
@@ -395,6 +397,8 @@ if [ "$SWIFT_API" -eq 1 ] ; then
   else
     echo -e "${RED}[ERROR] Unable to access the storage service via the tool swift.${NC}" && exit 1
   fi
+# <-=-=-=-> swift (end)    <-=-=-=->
+# <-=-=-=-> mc (start)     <-=-=-=->
 elif [ "$MINIO_CLIENT" -eq 1 ] ; then
   # use the S3 API with mc
   if mc ls $MINIO_CLIENT_ALIAS; then
@@ -402,6 +406,8 @@ elif [ "$MINIO_CLIENT" -eq 1 ] ; then
   else
     echo -e "${RED}[ERROR] Unable to access the storage service via the tool mc.${NC}" && exit 1
   fi
+# <-=-=-=-> mc (end)       <-=-=-=->
+# <-=-=-=-> az (start)     <-=-=-=->
 elif [ "$AZURE_CLI" -eq 1 ] ; then
   # use the Azure CLI
   if az storage container list ; then
@@ -409,6 +415,8 @@ elif [ "$AZURE_CLI" -eq 1 ] ; then
   else
     echo -e "${RED}[ERROR] Unable to access the storage service via the tool az.${NC}" && exit 1
   fi
+# <-=-=-=-> az (end)       <-=-=-=->
+# <-=-=-=-> gsutil (start) <-=-=-=->
 elif [ "$GOOGLE_API" -eq 1 ] ; then
   # use the Google API
   if gsutil ls ; then
@@ -416,12 +424,14 @@ elif [ "$GOOGLE_API" -eq 1 ] ; then
   else
     echo -e "${RED}[ERROR] Unable to access the storage service via the tool gsutil.${NC}" && exit 1
   fi
+# <-=-=-=-> gsutil (end)   <-=-=-=->
+# <-=-=-=-> aws (start)    <-=-=-=->
 elif [ "$AWS_CLI_API" -eq 1 ] ; then
   # use the AWS CLI
 
   # If [ -z "$VAR" ] is true of the variable $VAR is empty. 
   if [ -z "$ENDPOINT_URL_ADDRESS" ] ; then
-    # use the aws cli with an S3-compatible non-Amazon service (AWS S3)
+    # use the aws cli with Amazon AWS S3
     if aws s3 ls ; then
       echo -e "${GREEN}[OK] The storage service can be accessed via the tool aws.${NC}"
     else
@@ -429,45 +439,46 @@ elif [ "$AWS_CLI_API" -eq 1 ] ; then
     fi
   # If the variable $ENDPOINT_URL_ADDRESS is not empty...
   else
-    # use the aws cli with an S3-compatible Amazon service (e.g. Minio)
+    # use the aws cli with an S3-compatible non-Amazon service (e.g. Minio)
     if aws --endpoint-url=$ENDPOINT_URL_ADDRESS s3 ls ; then
       echo -e "${GREEN}[OK] The storage service can be accessed via the tool aws.${NC}"
     else
       echo -e "${RED}[ERROR] Unable to access the storage service via the tool aws.${NC}" && exit 1
     fi
   fi
+# <-=-=-=-> aws (end)      <-=-=-=->
+# <-=-=-=-> s4cmd (start)  <-=-=-=->
+elif [ "$S4CMD_CLIENT" -eq 1 ] ; then
+  # use the s4cmd CLI
 
-# elif [ "$S4CMD_CLIENT" -eq 1 ] ; then
-#   # use the S3 API with s4cmd
-#   #
-#   # If the optional parameter $S4CMD_CLIENT_ENDPOINT_URL with the IP and Port number 
-#   # of an S3-compatible storage service is not set (variable is empty), it is 
-#   # (opefully) AWS S3...
-#   if [ -z "$S4CMD_CLIENT_ENDPOINT_URL" ] ; then
-#     # Check if fetching the list of buckets works with s4cmd (on AWS S3)
-#     if s4cmd ls ; then
-#       echo -e "${GREEN}[OK] The storage service can be accessed via the tool s4cmd.${NC}"
-#     else
-#       echo -e "${RED}[ERROR] Unable to access the storage service via the tool s4cmd.${NC}" && exit 1
-#     fi
-#   # If the optional parameter $S4CMD_CLIENT_ENDPOINT_URL with the IP and Port number 
-#   # of an S3-compatible storage service is set (variable is not empty)...
-#   else
-#     # Check if fetching the list of buckets works with s4cmd
-#     if s4cmd --endpoint-url=$S4CMD_CLIENT_ENDPOINT_URL ls ; then
-#       echo -e "${GREEN}[OK] The storage service can be accessed via the tool s4cmd.${NC}"
-#     else
-#       echo -e "${RED}[ERROR] Unable to access the storage service via the tool s4cmd.${NC}" && exit 1
-#     fi
-#   fi
+  # If [ -z "$VAR" ] is true of the variable $VAR is empty. 
+  if [ -z "$ENDPOINT_URL_ADDRESS" ] ; then
+    # use the s4cmd cli with Amazon AWS S3
+    if s4cmd ls ; then
+      echo -e "${GREEN}[OK] The storage service can be accessed via the tool s4cmd.${NC}"
+    else
+      echo -e "${RED}[ERROR] Unable to access the storage service via the tool s4cmd.${NC}" && exit 1
+    fi
+  # If the variable $ENDPOINT_URL_ADDRESS is not empty...
+  else
+    # use the s4cmd cli with an S3-compatible non-Amazon service (e.g. Minio)
+    if s4cmd --endpoint-url=$ENDPOINT_URL_ADDRESS ls ; then
+      echo -e "${GREEN}[OK] The storage service can be accessed via the tool s4cmd.${NC}"
+    else
+      echo -e "${RED}[ERROR] Unable to access the storage service via the tool s4cmd.${NC}" && exit 1
+    fi
+  fi
+# <-=-=-=-> s4cmd (end)    <-=-=-=->
+# <-=-=-=-> s3cmd (start)  <-=-=-=->
 else
-  # use the S3 API with s3cmd
+  # use the s3cmd cli
   if s3cmd ls ; then
     echo -e "${GREEN}[OK] The storage service can be accessed via the tool s3cmd.${NC}"
   else
     echo -e "${RED}[ERROR] Unable to access the storage service via the tool s3cmd.${NC}" && exit 1
   fi
 fi
+# <-=-=-=-> s3cmd (end)  <-=-=-=->
 
 # Check if the directory already exists
 # This is not a part of the benchmark!
@@ -561,7 +572,7 @@ elif [ "$AWS_CLI_API" -eq 1 ] ; then
   # use the AWS CLI
     # If [ -z "$VAR" ] is true of the variable $VAR is empty. 
   if [ -z "$ENDPOINT_URL_ADDRESS" ] ; then
-    # use the aws cli with an S3-compatible non-Amazon service (AWS S3)
+    # use the aws cli with Amazon AWS S3
     if aws s3 mb s3://$BUCKET ; then
       echo -e "${GREEN}[OK] Bucket ${BUCKET} has been created with aws.${NC}"
     else
@@ -569,56 +580,42 @@ elif [ "$AWS_CLI_API" -eq 1 ] ; then
     fi
   # If the variable $ENDPOINT_URL_ADDRESS is not empty...
   else
-    # use the aws cli with an S3-compatible Amazon service (e.g. Minio)
+    # use the aws cli with an S3-compatible non-Amazon service (e.g. Minio)
     if aws --endpoint-url=$ENDPOINT_URL_ADDRESS s3 mb s3://$BUCKET ; then
       echo -e "${GREEN}[OK] Bucket ${BUCKET} has been created with aws.${NC}"
     else
       echo -e "${RED}[ERROR] Unable to create the bucket (container) ${BUCKET} with aws.${NC}" && exit 1
     fi
   fi
-# elif [ "$S4CMD_CLIENT" -eq 1 ] ; then
-#   # use the S3 API with s4cmd
-#   if [ "$BUCKET_LOCATION" -eq 1 ] ; then
-#     # If a specific site (location) for the bucket has been specified via command line parameter
-#     if s4cmd mb s3://$BUCKET ; then
-#       echo -e "${GREEN}[OK] Bucket ${BUCKET} has been created.${NC}"
-#       echo -e "${YELLOW}[INFO] The tool s4cmd has no command line parameter to specify the site (location) of a bucket.\nTherefore, the bucket has been created in the default region.\nIt is possible to specify the default region with the environment variable AWS_DEFAULT_REGION.${NC}\nexport AWS_DEFAULT_REGION=<region>"
-#     else
-#       echo -e "${RED}[ERROR] Unable to create the bucket ${BUCKET}.${NC}" && exit 1
-#     fi
-#   else
-#     # If no specific site (location) for the bucket has been specified via command line parameter
 
-#     # If the optional parameter $S4CMD_CLIENT_ENDPOINT_URL with the IP and Port number 
-#     # of an S3-compatible storage service is not set (variable is empty), it is 
-#     # (opefully) AWS S3...
-#     if [ -z "$S4CMD_CLIENT_ENDPOINT_URL" ] ; then
-#       # Create the bucket with s4cmd (on AWS S3)
-#       if s4cmd mb s3://$BUCKET ; then
-#         echo -e "${GREEN}[OK] Bucket ${BUCKET} has been created.${NC}"
-#       else
-#         echo -e "${RED}[ERROR] Unable to create the bucket ${BUCKET}.${NC}" && exit 1
-#       fi
-#     # If the optional parameter $S4CMD_CLIENT_ENDPOINT_URL with the IP and Port number 
-#     # of an S3-compatible storage service is set (variable is not empty)...
-#     else
-#       # Create the bucket with s4cmd
-#       if s4cmd --endpoint-url=$S4CMD_CLIENT_ENDPOINT_URL mb s3://$BUCKET ; then
-#         echo -e "${GREEN}[OK] Bucket ${BUCKET} has been created.${NC}"
-#       else
-#         echo -e "${RED}[ERROR] Unable to create the bucket ${BUCKET}.${NC}" && exit 1
-#       fi
-#     fi
+elif [ "$S4CMD_CLIENT" -eq 1 ] ; then
+  # use the s4cmd CLI
+    # If [ -z "$VAR" ] is true of the variable $VAR is empty. 
+  if [ -z "$ENDPOINT_URL_ADDRESS" ] ; then
+    # use the aws cli with Amazon AWS S3
+    if s4cmd mb s3://$BUCKET ; then
+      echo -e "${GREEN}[OK] Bucket ${BUCKET} has been created with s4cmd.${NC}"
+    else
+      echo -e "${RED}[ERROR] Unable to create the bucket (container) ${BUCKET} with s4cmd.${NC}" && exit 1
+    fi
+  # If the variable $ENDPOINT_URL_ADDRESS is not empty...
+  else
+    # use the s4cmd cli with an S3-compatible non-Amazon service (e.g. Minio)
+    if s4cmd --endpoint-url=$ENDPOINT_URL_ADDRESS mb s3://$BUCKET ; then
+      echo -e "${GREEN}[OK] Bucket ${BUCKET} has been created with s4cmd.${NC}"
+    else
+      echo -e "${RED}[ERROR] Unable to create the bucket (container) ${BUCKET} with s4cmd.${NC}" && exit 1
+    fi
+  fi
 
-#   fi
 else
-  # use the S3 API with s3cmd
+  # use the s3cmd cli
   if [ "$BUCKET_LOCATION" -eq 1 ] ; then
     # If a specific site (location) for the bucket has been specified via command line parameter
     if s3cmd mb s3://$BUCKET --bucket-location=$BUCKET_LOCATION_SITE ; then
-      echo -e "${GREEN}[OK] Bucket ${BUCKET} has been created.${NC}"
+      echo -e "${GREEN}[OK] Bucket ${BUCKET} has been created with s3cmd.${NC}"
     else
-      echo -e "${RED}[ERROR] Unable to create the bucket ${BUCKET}.${NC}" && exit 1
+      echo -e "${RED}[ERROR] Unable to create the bucket ${BUCKET} with s3cmd.${NC}" && exit 1
     fi
   else
     # If no specific site (location) for the bucket has been specified via command line parameter
@@ -667,26 +664,6 @@ if [ "$S3PERF_CLIENT" -eq 1 ] ; then
   done
 fi
 
-# # If we use the tool s4cmd...
-# if [ "$S4CMD_CLIENT" -eq 1 ] ; then
-#   # We shall check at least 5 times
-#   LOOP_VARIABLE=5
-#   # until LOOP_VARIABLE is greater than 0 
-#   while [ $LOOP_VARIABLE -gt "0" ]; do 
-#     # Check if the Bucket is accessible
-#     if s4cmd ls s3://$BUCKET ; then
-#       echo -e "${GREEN}[OK] The bucket is available.${NC}"
-#       # Skip entire rest of loop.
-#       break
-#     else
-#       echo -e "${YELLOW}[INFO] The bucket is not yet available!${NC}"
-#       # Decrement variable
-#       LOOP_VARIABLE=$((LOOP_VARIABLE-1))
-#       # Wait a moment. 
-#       sleep 1
-#     fi
-#   done
-# fi
 
 # If we use the tool gsutil...
 if [ "$GOOGLE_API" -eq 1 ] ; then
@@ -718,7 +695,7 @@ if [ "$AWS_CLI_API" -eq 1 ] ; then
 
     # If [ -z "$VAR" ] is true of the variable $VAR is empty. 
     if [ -z "$ENDPOINT_URL_ADDRESS" ] ; then
-      # use the aws cli with an S3-compatible non-Amazon service (AWS S3)
+      # use the aws cli with Amazon AWS S3
       # Check if the Bucket is accessible
       if aws s3 ls s3://$BUCKET ; then
         echo -e "${GREEN}[OK] The bucket is available (checked with aws).${NC}"
@@ -733,7 +710,7 @@ if [ "$AWS_CLI_API" -eq 1 ] ; then
       fi
     # If the variable $ENDPOINT_URL_ADDRESS is not empty...
     else
-      # use the aws cli with an S3-compatible Amazon service (e.g. Minio)
+      # use the aws cli with an S3-compatible non-Amazon service (e.g. Minio)
       # Check if the Bucket is accessible
       if aws --endpoint-url=$ENDPOINT_URL_ADDRESS s3 ls s3://$BUCKET ; then
         echo -e "${GREEN}[OK] The bucket is available (checked with aws).${NC}"
@@ -750,6 +727,46 @@ if [ "$AWS_CLI_API" -eq 1 ] ; then
   done
 fi
 
+# If we use the tool s4cmd...
+if [ "$S4CMD_CLIENT" -eq 1 ] ; then
+  # We shall check at least 5 times
+  LOOP_VARIABLE=5
+  # until LOOP_VARIABLE is greater than 0 
+  while [ $LOOP_VARIABLE -gt "0" ]; do 
+
+    # If [ -z "$VAR" ] is true of the variable $VAR is empty. 
+    if [ -z "$ENDPOINT_URL_ADDRESS" ] ; then
+      # use the s4cmd cli with Amazon AWS S3
+      # Check if the Bucket is accessible
+      if s4cmd ls s3://$BUCKET ; then
+        echo -e "${GREEN}[OK] The bucket is available (checked with s4cmd).${NC}"
+        # Skip entire rest of loop.
+        break
+      else
+        echo -e "${YELLOW}[INFO] The bucket is not yet available (checked with s4cmd)!${NC}"
+        # Decrement variable
+        LOOP_VARIABLE=$((LOOP_VARIABLE-1))
+        # Wait a moment. 
+        sleep 1
+      fi
+    # If the variable $ENDPOINT_URL_ADDRESS is not empty...
+    else
+      # use the aws s4cmd with an S3-compatible non-Amazon service (e.g. Minio)
+      # Check if the Bucket is accessible
+      if s4cmd --endpoint-url=$ENDPOINT_URL_ADDRESS ls s3://$BUCKET ; then
+        echo -e "${GREEN}[OK] The bucket is available (checked with s4cmd).${NC}"
+        # Skip entire rest of loop.
+        break
+      else
+        echo -e "${YELLOW}[INFO] The bucket is not yet available (checked with s4cmd)!${NC}"
+        # Decrement variable
+        LOOP_VARIABLE=$((LOOP_VARIABLE-1))
+        # Wait a moment. 
+        sleep 1
+      fi
+    fi
+  done
+fi
 
 # If we use the tool mc...
 if [ "$MINIO_CLIENT" -eq 1 ] ; then
@@ -826,7 +843,7 @@ if [ "$PARALLEL" -eq 1 ] ; then
   # use the AWS CLI
     # If [ -z "$VAR" ] is true of the variable $VAR is empty. 
     if [ -z "$ENDPOINT_URL_ADDRESS" ] ; then
-      # use the aws cli with an S3-compatible non-Amazon service (AWS S3)
+      # use the aws cli with Amazon AWS S3
 
       # Upload files in parallel
       # This removes the subfolder name(s) in the output of find: -type f -printf  "%f\n"
@@ -837,15 +854,38 @@ if [ "$PARALLEL" -eq 1 ] ; then
       fi
     # If the variable $ENDPOINT_URL_ADDRESS is not empty...
     else
-      # use the aws cli with an S3-compatible Amazon service (e.g. Minio)
+      # use the aws cli with an S3-compatible non-Amazon service (e.g. Minio)
       if find $DIRECTORY/*.txt -type f -printf  "%f\n" | parallel aws --endpoint-url=$ENDPOINT_URL_ADDRESS s3 cp $DIRECTORY/{} s3://$BUCKET/{} ; then
         echo -e "${GREEN}[OK] Files have been uploaded in parallel with aws.${NC}"
       else
         echo -e "${RED}[ERROR] Unable to upload the files in parallel with aws.${NC}" && exit 1
       fi
     fi
+
+  elif [ "$S4CMD_CLIENT" -eq 1 ] ; then
+  # use the s4cmd CLI
+    # If [ -z "$VAR" ] is true of the variable $VAR is empty. 
+    if [ -z "$ENDPOINT_URL_ADDRESS" ] ; then
+      # use the s4cmd cli with Amazon AWS S3
+
+      # Upload files in parallel
+      # This removes the subfolder name(s) in the output of find: -type f -printf  "%f\n"
+      if find $DIRECTORY/*.txt -type f -printf  "%f\n" | parallel s4cmd put $DIRECTORY/{} s3://$BUCKET/{} ; then
+        echo -e "${GREEN}[OK] Files have been uploaded in parallel with s4cmd.${NC}"
+      else
+        echo -e "${RED}[ERROR] Unable to upload the files in parallel with s4cmd.${NC}" && exit 1
+      fi
+    # If the variable $ENDPOINT_URL_ADDRESS is not empty...
+    else
+      # use the s4cmd cli with an S3-compatible non-Amazon service (e.g. Minio)
+      if find $DIRECTORY/*.txt -type f -printf  "%f\n" | parallel s4cmd --endpoint-url=$ENDPOINT_URL_ADDRESS put $DIRECTORY/{} s3://$BUCKET/{} ; then
+        echo -e "${GREEN}[OK] Files have been uploaded in parallel with s4cmd.${NC}"
+      else
+        echo -e "${RED}[ERROR] Unable to upload the files in parallel with s4cmd.${NC}" && exit 1
+      fi
+    fi
   else
-  # use the S3 API with s3cmd
+  # use the s3cmd CLI
     # Upload files in parallel
     if find $DIRECTORY/*.txt | parallel s3cmd put {} s3://$BUCKET ; then
       echo -e "${GREEN}[OK] Files have been uploaded in parallel with s3cmd.${NC}"
@@ -890,7 +930,7 @@ else
       echo -e "${RED}[ERROR] Unable to upload the files sequentially with gsutil.${NC}" && exit 1
     fi
   elif [ "$AWS_CLI_API" -eq 1 ] ; then
-    # use the AWS CLI
+    # use the AWS CLI with Amazon AWS S3
 
     # If [ -z "$VAR" ] is true of the variable $VAR is empty. 
     if [ -z "$ENDPOINT_URL_ADDRESS" ] ; then
@@ -902,15 +942,35 @@ else
       fi
     # If the variable $ENDPOINT_URL_ADDRESS is not empty...
     else
-      # use the aws cli with an S3-compatible Amazon service (e.g. Minio)
+      # use the aws cli with an S3-compatible non-Amazon service (e.g. Minio)
       if aws --endpoint-url=$ENDPOINT_URL_ADDRESS s3 cp $DIRECTORY/ s3://$BUCKET --recursive --exclude "*" --include "*.txt" ; then
         echo -e "${GREEN}[OK] Files have been uploaded sequentially with aws.${NC}"
       else
         echo -e "${RED}[ERROR] Unable to upload the files sequentially with aws.${NC}" && exit 1
       fi
     fi
+  elif [ "$S4CMD_CLIENT" -eq 1 ] ; then
+    # use the s4cmd CLI with Amazon AWS S3
+
+    # If [ -z "$VAR" ] is true of the variable $VAR is empty. 
+    if [ -z "$ENDPOINT_URL_ADDRESS" ] ; then
+      # Upload files sequentially
+      if s4cmd put $DIRECTORY/*.txt s3://$BUCKET ; then
+        echo -e "${GREEN}[OK] Files have been uploaded sequentially with s4cmd.${NC}"
+      else
+        echo -e "${RED}[ERROR] Unable to upload the files sequentially with s4cmd.${NC}" && exit 1
+      fi
+    # If the variable $ENDPOINT_URL_ADDRESS is not empty...
+    else
+      # use the s4cmd cli with an S3-compatible non-Amazon service (e.g. Minio)
+      if s4cmd --endpoint-url=$ENDPOINT_URL_ADDRES put $DIRECTORY/*.txt s3://$BUCKET ; then
+        echo -e "${GREEN}[OK] Files have been uploaded sequentially with s4cmd.${NC}"
+      else
+        echo -e "${RED}[ERROR] Unable to upload the files sequentially with s4cmd.${NC}" && exit 1
+      fi
+    fi
   else
-  # use the S3 API with s3cmd
+  # use the s3cmd cli
     # Upload files sequentially
     if s3cmd put $DIRECTORY/*.txt s3://$BUCKET ; then
       echo -e "${GREEN}[OK] Files have been uploaded sequentially with s3cmd.${NC}"
@@ -987,7 +1047,7 @@ elif [ "$AWS_CLI_API" -eq 1 ] ; then
 
   # If [ -z "$VAR" ] is true of the variable $VAR is empty. 
   if [ -z "$ENDPOINT_URL_ADDRESS" ] ; then
-    # use the aws cli with an S3-compatible non-Amazon service (AWS S3)
+    # use the aws cli with Amazon AWS S3
     if aws s3 ls s3://$BUCKET ; then
       echo -e "${GREEN}[OK] The list of objects inside ${BUCKET} has been fetched with aws.${NC}"
     else
@@ -995,15 +1055,35 @@ elif [ "$AWS_CLI_API" -eq 1 ] ; then
     fi
   # If the variable $ENDPOINT_URL_ADDRESS is not empty...
   else
-    # use the aws cli with an S3-compatible Amazon service (e.g. Minio)
+    # use the aws cli with an S3-compatible non-Amazon service (e.g. Minio)
     if aws --endpoint-url=$ENDPOINT_URL_ADDRESS s3 ls s3://$BUCKET ; then
       echo -e "${GREEN}[OK] The list of objects inside ${BUCKET} has been fetched with aws.${NC}"
     else
       echo -e "${RED}[ERROR] Unable to fetch the list of objects inside ${BUCKET} with aws.${NC}" && exit 1
     fi
   fi
+elif [ "$S4CMD_CLIENT" -eq 1 ] ; then
+  # use the s4cmd CLI
+
+  # If [ -z "$VAR" ] is true of the variable $VAR is empty. 
+  if [ -z "$ENDPOINT_URL_ADDRESS" ] ; then
+    # use the s4cmd cli with Amazon AWS S3
+    if s4cmd ls s3://$BUCKET ; then
+      echo -e "${GREEN}[OK] The list of objects inside ${BUCKET} has been fetched with s4cmd.${NC}"
+    else
+      echo -e "${RED}[ERROR] Unable to fetch the list of objects inside ${BUCKET} with s4cmd.${NC}" && exit 1
+    fi
+  # If the variable $ENDPOINT_URL_ADDRESS is not empty...
+  else
+    # use the s4cmd cli with an S3-compatible non-Amazon service (e.g. Minio)
+    if s4cmd --endpoint-url=$ENDPOINT_URL_ADDRESS ls s3://$BUCKET ; then
+      echo -e "${GREEN}[OK] The list of objects inside ${BUCKET} has been fetched with s4cmd.${NC}"
+    else
+      echo -e "${RED}[ERROR] Unable to fetch the list of objects inside ${BUCKET} with s4cmd.${NC}" && exit 1
+    fi
+  fi
 else
-  # use the S3 API with s3cmd
+  # use the s3cmd cli
   if s3cmd ls s3://$BUCKET ; then
     echo -e "${GREEN}[OK] The list of objects inside ${BUCKET} has been fetched with s3cmd.${NC}"
   else
@@ -1075,7 +1155,7 @@ if [ "$PARALLEL" -eq 1 ] ; then
 
     # If [ -z "$VAR" ] is true of the variable $VAR is empty. 
     if [ -z "$ENDPOINT_URL_ADDRESS" ] ; then
-      # use the aws cli with an S3-compatible non-Amazon service (AWS S3)
+      # use the aws cli with Amazon AWS S3
 
       # Download files in parallel
       # The syntax is: aws s3 cp s3://<BUCKET>/<FILE> <LOCALFILE>
@@ -1087,7 +1167,7 @@ if [ "$PARALLEL" -eq 1 ] ; then
       fi
     # If the variable $ENDPOINT_URL_ADDRESS is not empty...
     else
-      # use the aws cli with an S3-compatible Amazon service (e.g. Minio)
+      # use the aws cli with an S3-compatible non-Amazon service (e.g. Minio)
       if find ${DIRECTORY}/*.txt -type f -printf "%f\n" | parallel aws --endpoint-url=$ENDPOINT_URL_ADDRESS s3 cp s3://$BUCKET/{} $DIRECTORY/{} ; then
         echo -e "${GREEN}[OK] Files have been downloaded in parallel with aws.${NC}"
       else
@@ -1095,7 +1175,7 @@ if [ "$PARALLEL" -eq 1 ] ; then
       fi
     fi
   else
-  # use the S3 API with s3cmd
+  # use the s3cmd cli
     # Download files in parallel
     # This removes the subfolder name(s) in the output of find: -type f -printf  "%f\n"
     if find ${DIRECTORY}/*.txt -type f -printf "%f\n" | parallel s3cmd get --force s3://$BUCKET/{} $DIRECTORY/ ; then
@@ -1148,7 +1228,7 @@ else
 
     # If [ -z "$VAR" ] is true of the variable $VAR is empty. 
     if [ -z "$ENDPOINT_URL_ADDRESS" ] ; then
-      # use the aws cli with an S3-compatible non-Amazon service (AWS S3)
+      # use the aws cli with Amazon AWS S3
 
       # Download files sequentially
       if aws s3 cp s3://$BUCKET $DIRECTORY --recursive ; then
@@ -1157,7 +1237,7 @@ else
         echo -e "${RED}[ERROR] Unable to download the files sequentially with aws.${NC}" && exit 1
       fi
     else
-      # use the aws cli with an S3-compatible Amazon service (e.g. Minio)
+      # use the aws cli with an S3-compatible non-Amazon service (e.g. Minio)
       if aws --endpoint-url=$ENDPOINT_URL_ADDRESS s3 cp s3://$BUCKET $DIRECTORY --recursive ; then
         echo -e "${GREEN}[OK] Files have been downloaded sequentially with aws.${NC}"
       else
@@ -1165,7 +1245,7 @@ else
       fi
     fi
   else
-  # use the S3 API with s3cmd
+  # use the s3cmd CLI
     # Download files sequentially
     if s3cmd get --force s3://$BUCKET/*.txt $DIRECTORY/ ; then
       echo -e "${GREEN}[OK] Files have been downloaded sequentially with s3cmd.${NC}"
@@ -1256,7 +1336,7 @@ if [ "$PARALLEL" -eq 1 ] ; then
 
     # If [ -z "$VAR" ] is true of the variable $VAR is empty. 
     if [ -z "$ENDPOINT_URL_ADDRESS" ] ; then
-      # use the aws cli with an S3-compatible non-Amazon service (AWS S3)
+      # use the aws cli with Amazon AWS S3
       # Erase files (objects) inside the bucket in parallel
       if find ${DIRECTORY}/*.txt -type f -printf "%f\n" | parallel aws s3 rm s3://$BUCKET/{} ; then
         echo -e "${GREEN}[OK] Files inside the bucket (container) ${BUCKET} have been erased in parallel with aws.${NC}"
@@ -1265,15 +1345,36 @@ if [ "$PARALLEL" -eq 1 ] ; then
       fi
     # If the variable $ENDPOINT_URL_ADDRESS is not empty...
     else
-      # use the aws cli with an S3-compatible Amazon service (e.g. Minio)
+      # use the aws cli with an S3-compatible non-Amazon service (e.g. Minio)
       if find ${DIRECTORY}/*.txt -type f -printf "%f\n" | parallel aws --endpoint-url=$ENDPOINT_URL_ADDRESS s3 rm s3://$BUCKET/{} ; then
         echo -e "${GREEN}[OK] Files inside the bucket (container) ${BUCKET} have been erased in parallel with aws.${NC}"
       else
         echo -e "${RED}[ERROR] Unable to erase the files inside the bucket (container) ${BUCKET} in parallel with aws.${NC}" && exit 1
       fi
     fi
+  elif [ "$S4CMD_CLIENT" -eq 1 ] ; then
+  # use the s4cmd CLI
+
+    # If [ -z "$VAR" ] is true of the variable $VAR is empty. 
+    if [ -z "$ENDPOINT_URL_ADDRESS" ] ; then
+      # use the s4cmd cli with Amazon AWS S3
+      # Erase files (objects) inside the bucket in parallel
+      if find ${DIRECTORY}/*.txt -type f -printf "%f\n" | parallel s4cmd del s3://$BUCKET/{} ; then
+        echo -e "${GREEN}[OK] Files inside the bucket (container) ${BUCKET} have been erased in parallel with s4cmd.${NC}"
+      else
+        echo -e "${RED}[ERROR] Unable to erase the files inside the bucket (container) ${BUCKET} in parallel with s4cmd.${NC}" && exit 1
+      fi
+    # If the variable $ENDPOINT_URL_ADDRESS is not empty...
+    else
+      # use the s4cmd cli with an S3-compatible non-Amazon service (e.g. Minio)
+      if find ${DIRECTORY}/*.txt -type f -printf "%f\n" | parallel s4cmd --endpoint-url=$ENDPOINT_URL_ADDRESS del s3://$BUCKET/{} ; then
+        echo -e "${GREEN}[OK] Files inside the bucket (container) ${BUCKET} have been erased in parallel with s4cmd.${NC}"
+      else
+        echo -e "${RED}[ERROR] Unable to erase the files inside the bucket (container) ${BUCKET} in parallel with s4cmd.${NC}" && exit 1
+      fi
+    fi
   else
-  # use the S3 API with s3cmd
+  # use the s3cmd CLI
     #  Erase files (objects) inside the bucket in parallel
     # -type f -printf "%f\n" gives back just the filename and not the folder information
     if find $DIRECTORY/*.txt -type f -printf "%f\n" | parallel s3cmd del s3://$BUCKET/{} ; then
@@ -1323,7 +1424,7 @@ else
 
     # If [ -z "$VAR" ] is true of the variable $VAR is empty. 
     if [ -z "$ENDPOINT_URL_ADDRESS" ] ; then
-      # use the aws cli with an S3-compatible non-Amazon service (AWS S3)
+      # use the aws cli with Amazon AWS S3
       # Erase files (objects) inside the bucket sequentially
       if aws s3 rm s3://$BUCKET --recursive --include "*" ; then
         echo -e "${GREEN}[OK] Files inside the bucket (container) ${BUCKET} have been erased sequentially with aws.${NC}"
@@ -1332,15 +1433,36 @@ else
       fi
     # If the variable $ENDPOINT_URL_ADDRESS is not empty...
     else
-      # use the aws cli with an S3-compatible Amazon service (e.g. Minio)
+      # use the aws cli with an S3-compatible non-Amazon service (e.g. Minio)
       if aws --endpoint-url=$ENDPOINT_URL_ADDRESS s3 rm s3://$BUCKET --recursive --include "*" ; then
         echo -e "${GREEN}[OK] Files inside the bucket (container) ${BUCKET} have been erased sequentially with aws.${NC}"
       else
         echo -e "${RED}[ERROR] Unable to erase the files inside the bucket (container) ${BUCKET} sequentially with aws.${NC}" && exit 1
       fi
     fi
+  elif [ "$S4CMD_CLIENT" -eq 1 ] ; then
+  # use the s4cmd CLI
+
+    # If [ -z "$VAR" ] is true of the variable $VAR is empty. 
+    if [ -z "$ENDPOINT_URL_ADDRESS" ] ; then
+      # use the s4cmd cli with Amazon AWS S3
+      # Erase files (objects) inside the bucket sequentially
+      if s4cmd del s3://$BUCKET/*.txt ; then
+        echo -e "${GREEN}[OK] Files inside the bucket (container) ${BUCKET} have been erased sequentially with s4cmd.${NC}"
+      else
+        echo -e "${RED}[ERROR] Unable to erase the files inside the bucket (container) ${BUCKET} sequentially with s4cmd.${NC}" && exit 1
+      fi
+    # If the variable $ENDPOINT_URL_ADDRESS is not empty...
+    else
+      # use the s4cmd cli with an S3-compatible non-Amazon service (e.g. Minio)
+      if s4cmd --endpoint-url=$ENDPOINT_URL_ADDRESS del s3://$BUCKET/*.txt ; then
+        echo -e "${GREEN}[OK] Files inside the bucket (container) ${BUCKET} have been erased sequentially with s4cmd.${NC}"
+      else
+        echo -e "${RED}[ERROR] Unable to erase the files inside the bucket (container) ${BUCKET} sequentially with s4cmd.${NC}" && exit 1
+      fi
+    fi
   else
-  # use the S3 API with s3cmd
+  # use the s3cmd CLI
     # Erase files (objects) inside the bucket sequentially
     if s3cmd del s3://$BUCKET/* ; then
       echo -e "${GREEN}[OK] Files inside the bucket ${BUCKET} have been erased sequentially with s3cmd.${NC}"
@@ -1405,7 +1527,7 @@ elif [ "$AWS_CLI_API" -eq 1 ] ; then
   # use the AWS CLI
   # If [ -z "$VAR" ] is true of the variable $VAR is empty. 
   if [ -z "$ENDPOINT_URL_ADDRESS" ] ; then
-    # use the aws cli with an S3-compatible non-Amazon service (AWS S3)
+    # use the aws cli with Amazon AWS S3
     if aws s3 rb s3://$BUCKET ; then
     echo -e "${GREEN}[OK] Bucket (Container) ${BUCKET} has been erased with aws.${NC}"
     else
@@ -1413,15 +1535,34 @@ elif [ "$AWS_CLI_API" -eq 1 ] ; then
     fi
   # If the variable $ENDPOINT_URL_ADDRESS is not empty...
   else
-    # use the aws cli with an S3-compatible Amazon service (e.g. Minio)
+    # use the aws cli with an S3-compatible non-Amazon service (e.g. Minio)
     if aws --endpoint-url=$ENDPOINT_URL_ADDRESS s3 rb s3://$BUCKET ; then
     echo -e "${GREEN}[OK] Bucket (Container) ${BUCKET} has been erased with aws.${NC}"
     else
       echo -e "${RED}[ERROR] Unable to erase the bucket (container) ${BUCKET} with aws.${NC}" && exit 1
     fi
   fi
+elif [ "$S4CMD_CLIENT" -eq 1 ] ; then
+  # use the s4cmd CLI
+  # If [ -z "$VAR" ] is true of the variable $VAR is empty. 
+  if [ -z "$ENDPOINT_URL_ADDRESS" ] ; then
+    # use the s4cmd cli with Amazon AWS S3
+    if s4cmd --recursive del s3://$BUCKET ; then
+    echo -e "${GREEN}[OK] Bucket (Container) ${BUCKET} has been erased with s4cmd.${NC}"
+    else
+      echo -e "${RED}[ERROR] Unable to erase the bucket (container) ${BUCKET} with s4cmd.${NC}" && exit 1
+    fi
+  # If the variable $ENDPOINT_URL_ADDRESS is not empty...
+  else
+    # use the s4cmd cli with an S3-compatible non-Amazon service (e.g. Minio)
+    if s4cmd --recursive --endpoint-url=$ENDPOINT_URL_ADDRESS del s3://$BUCKET ; then
+    echo -e "${GREEN}[OK] Bucket (Container) ${BUCKET} has been erased with s4cmd.${NC}"
+    else
+      echo -e "${RED}[ERROR] Unable to erase the bucket (container) ${BUCKET} with s4cmd.${NC}" && exit 1
+    fi
+  fi
 else
-  # use the S3 API with s3cmd
+  # use the s3cmd CLI
   if s3cmd rb --force --recursive s3://$BUCKET ; then
     echo -e "${GREEN}[OK] Bucket ${BUCKET} has been erased with s3cmd.${NC}"
   else
