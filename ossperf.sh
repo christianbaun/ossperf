@@ -7,8 +7,8 @@
 # contributors: Rosa Maria Spanou, Marius Wernicke, Brian_P, agracie
 # url:          https://github.com/christianbaun/ossperf
 # license:      GPLv3
-# date:         October 15th 2019
-# version:      1.01
+# date:         February 6th 2020
+# version:      1.02
 # bash_version: 4.4.12(1)-release
 # requires:     md5sum (tested with version 8.26),
 #               bc (tested with version 1.06.95),
@@ -56,6 +56,13 @@ Arguments:
      the python client for the Google API)
 -w : use the AWS CLI instead of the s3cmd (this requires the installation 
      and configuration of the aws cli client)
+-r : use the s4cmd client. It can only interact with the AWS S3 service.  
+     The tool uses the ~/.s3cfg configuration file if it exists. Otherwise it 
+     will use the content of the environment variables S3_ACCESS_KEY and 
+     S3_SECRET_KEY to access the AWS S3 service. For services that are not 
+     AWS S3, it is required to provide the endpoint-url parameter with the IP 
+     and Port addresses of the service, so please provide this as additional 
+     parameter: http://<IP>:<PORT>
 -l : use a specific site (location) for the bucket. This is supported e.g. 
      by the AWS S3 and Google Cloud Storage
 -d : If the aws cli shall be used with an S3-compatible non-Amazon service, 
@@ -66,12 +73,6 @@ Arguments:
 "
 exit 0
 }
-
-
-# # !!!! The s4cmd client is not supported up to now !!!!
-# -r : use the s4cmd client. It can only interact with the AWS S3 service.  The tool uses the ~/.s3cfg configuration file if it exists. Otherwise it will use the content of the environment variables S3_ACCESS_KEY and S3_SECRET_KEY to access the AWS S3 service. For services that are not AWS S3, it is required to provide the endpoint-url parameter with the IP and Port addresses of the service, so please provide this as additional parameter: http://<IP>:<PORT>
-# # !!!! The s4cmd client is not supported up to now !!!!
-
 
 
 function box_out()
@@ -301,7 +302,6 @@ if [ "$S4CMD_CLIENT" -eq 1 ] ; then
   else
     echo -e "${YELLOW}[INFO] The s4cmd client has been found on this system.${NC}"
     s4cmd --version
-    echo -e "${YELLOW}[INFO] But because s4cmd does not implemnt the feature of earsing buckets,it is not supported by ossperf up to now\nhttps://github.com/bloomreach/s4cmd/issues/164.${NC}" && exit 1
   fi
 fi
 
@@ -376,7 +376,7 @@ while [ $LOOP_VARIABLE -gt "0" ]; do
     # Decrement variable
     LOOP_VARIABLE=$((LOOP_VARIABLE-1))
     if [ "$LOOP_VARIABLE" -eq 0 ] ; then
-      echo -e "${RED}[ERROR] This computer has no working internet connection. Please check your network settings.${NC}" && exit 1
+      echo -e "${RED}[INFO] This computer has no working internet connection. Please check your network settings.${NC}"
     fi
     # Wait a moment. 
     sleep 1
