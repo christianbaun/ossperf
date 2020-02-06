@@ -376,7 +376,7 @@ while [ $LOOP_VARIABLE -gt "0" ]; do
     # Decrement variable
     LOOP_VARIABLE=$((LOOP_VARIABLE-1))
     if [ "$LOOP_VARIABLE" -eq 0 ] ; then
-      echo -e "${RED}[INFO] This computer has no working internet connection. Please check your network settings.${NC}"
+      echo -e "${RED}[INFO] This computer has no working internet connection.${NC}"
     fi
     # Wait a moment. 
     sleep 1
