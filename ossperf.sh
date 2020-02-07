@@ -157,32 +157,34 @@ if [[ "$MINIO_CLIENT" -ne 1  && "$AZURE_CLI" -ne 1 && "$S4CMD_CLIENT" -ne 1 && "
    echo -e "${YELLOW}[INFO] ossperf will use the tool s3cmd because no other client tool has been specified via command line parameter.${NC}"
 fi
 
+
 # Check the operating system
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
-        # Linux
-        echo -e "${YELLOW}[INFO] The operating system is Linux.${NC}"
-        echo ${OSTYPE}
+    # Linux
+    echo -e "${YELLOW}[INFO] The operating system is Linux.${NC}"
+    echo ${OSTYPE}
 elif [[ "$OSTYPE" == "freebsd"* ]]; then
-        # FreeBSD
-        echo -e "${YELLOW}[INFO] The operating system is FreeBSD.${NC}"
-        echo ${OSTYPE}
+    # FreeBSD
+    echo -e "${YELLOW}[INFO] The operating system is FreeBSD.${NC}"
+    echo ${OSTYPE}
 elif [[ "$OSTYPE" == "darwin"* ]]; then
-        # Mac OS X
-        echo -e "${YELLOW}[INFO] The operating system is Mac OS X.${NC}"
-        echo ${OSTYPE}
+    # Mac OS X
+    echo -e "${YELLOW}[INFO] The operating system is Mac OS X.${NC}"
+    echo ${OSTYPE}
 elif [[ "$OSTYPE" == "msys" ]]; then
-        # Windows 
-        echo -e "${YELLOW}[INFO] The operating system is Windows.${NC}"
-        echo ${OSTYPE}
+    # Windows 
+    echo -e "${YELLOW}[INFO] The operating system is Windows.${NC}"
+    echo ${OSTYPE}
 elif [[ "$OSTYPE" == "cygwin" ]]; then
-        # POSIX compatibility layer for Windows
-        echo -e "${YELLOW}[INFO] POSIX compatibility layer for Windows detected.${NC}"
-        echo ${OSTYPE}
+    # POSIX compatibility layer for Windows
+    echo -e "${YELLOW}[INFO] POSIX compatibility layer for Windows detected.${NC}"
+    echo ${OSTYPE}
 else
-        # Unknown
-        echo -e "${YELLOW}[INFO] The operating system is unknown.${NC}"
-        echo ${OSTYPE}
+    # Unknown
+    echo -e "${YELLOW}[INFO] The operating system is unknown.${NC}"
+    echo ${OSTYPE}
 fi
+
 
 # Check if the required command line tools are available
 if ! [ -x "$(command -v bash)" ]; then
