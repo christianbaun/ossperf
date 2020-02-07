@@ -61,16 +61,24 @@ These software packages must be installed:
 These software packages are optional:
 
 - [swift](https://github.com/openstack/python-swiftclient) -- Python client for the Swift API (tested with version 2.3.1)
-- [mc](https://github.com/minio/mc) -- Minio Client for the S3 API (tested with version 2019-10-02T19:41:02Z)
+- [mc](https://github.com/minio/mc) -- Minio Client for the S3 API (tested with version RELEASE.2020-02-05T20-07-22Z)
 - [az](https://github.com/Azure/azure-cli) -- Python client for the Azure CLI (tested with version 2.0)
 - [gsutil](https://github.com/GoogleCloudPlatform/gsutil) -- Python client for the Google Cloud Storage as replacement for s3cmd (tested with version 4.27 and 4.38)
 - [aws](https://github.com/aws/aws-cli) -- AWS CLI client for the S3 API (tested with version 1.15.6)
 
-## Example
+## Examples
 
-This command creates five files of size 1 MB each and use them to test the performance and data integrity of the storage service. The new bucket used has the name ossperf-testbucket, and the uploads and downloads are carried out in parallel.
+This command creates five files of size 1 MB each and uses them to test the performance and data integrity of the storage service. The new bucket used has the name ossperf-testbucket, and the uploads and downloads are carried out in parallel. The [s3cmd](https://github.com/s3tools/s3cmd) command line tool is used.
 
 `./ossperf.sh -n 5 -s 1048576 -b ossperf-testbucket -p`
+
+This command does the same, but uses the Minio Client [mc](https://github.com/minio/mc) for the S3 API insted of s3cmd.
+
+`./ossperf.sh -n 5 -s 1048576 -b ossperf-testbucket -p -m minio`
+
+This command creates ten files of size 512 kB each and uses them to test the performance and data integrity of the AWS S3 in the region eu-west-2 (Frankfurt am Main). The new bucket used has the name my-unique-bucketname, and the uploads and downloads are carried out in parallel. The [aws](https://github.com/aws/aws-cli) command line tool is used.
+
+`./ossperf.sh -n 10 -s 524288 -p -b my-unique-bucketname -w eu-west-2`
 
 ## Related Work
 

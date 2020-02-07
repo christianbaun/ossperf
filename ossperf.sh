@@ -15,7 +15,7 @@
 #               s3cmd (tested with versions 1.5.0, 1.6.1 and 2.0.2),
 #               parallel (tested with version 20161222)
 # optional      swift -- Python client for the Swift API (tested with v2.3.1),
-#               mc -- Minio Client for the S3 API (tested with v2019-10-02T19:41:02Z)
+#               mc -- Minio Client for the S3 API (tested with RELEASE.2020-02-05T20-07-22Z)
 #               az -- Python client for the Azure CLI (tested with v2.0),
 #               gsutil -- Python client for the Google API (tested with v4.27 and 4.38)
 #               aws -- AWS CLI client for the S3 API (tested with v1.15.6)
