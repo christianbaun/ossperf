@@ -7,8 +7,8 @@
 # contributors: Rosa Maria Spanou, Marius Wernicke, Brian_P, agracie
 # url:          https://github.com/christianbaun/ossperf
 # license:      GPLv3
-# date:         February 6th 2020
-# version:      1.02
+# date:         February 7th 2020
+# version:      1.03
 # bash_version: 4.4.12(1)-release
 # requires:     md5sum (tested with version 8.26),
 #               bc (tested with version 1.06.95),
@@ -159,6 +159,14 @@ fi
 
 
 # Check if the required command line tools are available
+if ! [ -x "$(command -v bash)" ]; then
+    echo -e "${RED}[ERROR] ossperf requires the bash command line interpreter. Please install it.${NC}"
+    exit 1
+else
+    echo -e "${YELLOW}[INFO] The bash command line interpreter has been found on this system.${NC}"
+    bash --version | head -n 1
+fi
+
 if ! [ -x "$(command -v s3cmd)" ]; then
     echo -e "${RED}[ERROR] ossperf requires the command line tool s3cmd. Please install it.${NC}"
     exit 1
