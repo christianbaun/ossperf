@@ -78,7 +78,7 @@ This command does the same, but uses the Minio Client [mc](https://github.com/mi
 
 This command creates ten files of size 512 kB each and uses them to test the performance and data integrity of the AWS S3 in the region eu-west-2 (Frankfurt am Main). The new bucket used has the name my-unique-bucketname, and the uploads and downloads are carried out in parallel. The [aws](https://github.com/aws/aws-cli) command line tool is used.
 
-`./ossperf.sh -n 10 -s 524288 -p -b my-unique-bucketname -w eu-west-2`
+`./ossperf.sh -n 10 -s 524288 -b my-unique-bucketname -p -w eu-west-2`
 
 ## Related Work
 
