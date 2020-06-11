@@ -7,8 +7,8 @@
 # contributors: Rosa Maria Spanou, Marius Wernicke, Brian_P, agracie
 # url:          https://github.com/christianbaun/ossperf
 # license:      GPLv3
-# date:         February 7th 2020
-# version:      1.04
+# date:         June 11th 2020
+# version:      1.05
 # bash_version: 4.4.12(1)-release
 # requires:     md5sum (tested with version 8.26),
 #               bc (tested with version 1.06.95),
@@ -118,6 +118,13 @@ GREEN='\033[0;32m'        # Green color
 YELLOW='\033[0;33m'       # Yellow color
 BLUE='\033[0;34m'         # Blue color
 WHITE='\033[0;37m'        # White color
+
+# If no arguments are provided at all...
+if [ $# -eq 0 ]; then
+    echo -e "${RED}[ERROR] No arguments provided! ${OPTARG} ${NC}" 
+    echo -e "${YELLOW}[INFO] You need ro provide at least the number of files and their size with -n <files> and -s <size>${OPTARG} ${NC}\n" 
+    usage
+fi
 
 while getopts "hn:s:b:uam:zgwrl:d:kpo" ARG ; do
   case $ARG in
