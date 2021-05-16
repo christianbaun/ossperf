@@ -6,15 +6,15 @@
 # author:       Dr. Christian Baun
 # url:          https://github.com/christianbaun/ossperf
 # license:      GPLv2
-# date:         June 23rd 2019
+# date:         June 11th 2020
 # version:      1.08
 # bash_version: 4.4.12(1)-release
 # requires:     
 # notes: 
 # ----------------------------------------------------------------------------
 
-for i in 512 1024 2048 4096 8192 16384 32768 65536 131072 262144 524288 1048576 2097152 4194304 8388608
-# for i in 4194304 
+#for i in 4096 8192 16384 32768 65536 131072 262144 524288 1048576 2097152 4194304 8388608
+for i in 8388608 
   do
     for x in 1 2 3 4 5
 #     for x in 1
@@ -22,9 +22,9 @@ for i in 512 1024 2048 4096 8192 16384 32768 65536 131072 262144 524288 1048576 
 #          ./ossperf.sh -n 10 -s ${i} -m myminioneu -o 2>&1 # Minio Client (mc) serial   
 #          ./ossperf.sh -n 10 -s ${i} -m myminioneu -p -o 2>&1 # Minio Client (mc) parallel       
 #          ./ossperf.sh -n 10 -s ${i} -b ossperf-testbucket -o 2>&1 # s3cmd serial  
-#          ./ossperf.sh -n 10 -s ${i} -b ossperf-testbucket -p -o 2>&1 # s3cmd parallel     
+           ./ossperf.sh -n 10 -s ${i} -b ossperf-testbucket -p -o 2>&1 # s3cmd parallel     
 #          ./ossperf.sh -n 10 -s ${i} -b ossperf-testbucket -l eu -o 2>&1 # s3cmd serial  
-           ./ossperf.sh -n 10 -s ${i} -b ossperf-testbucket -l eu -p -o 2>&1 # s3cmd parallel
+#          ./ossperf.sh -n 10 -s ${i} -b ossperf-testbucket -l eu -p -o 2>&1 # s3cmd parallel
 #          ./ossperf.sh -n 10 -s ${i} -b ossperf-testbucket -g -o 2>&1 # gsutil serial
 #           ./ossperf.sh -n 10 -s ${i} -b ossperf-testbucket -g -p -o 2>&1 # gsutil parallel
 #          ./ossperf.sh -n 10 -s ${i} -b ossperf-testbucket -g -l europe-west3 -o 2>&1 # gsutil serial

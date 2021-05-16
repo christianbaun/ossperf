@@ -393,7 +393,7 @@ if [ "$NUM_FILES" -eq 0 ] ; then
 fi
 
 # Validate that...
-# SIZE_FILES is not 0 and not bigger than 16777216
+# SIZE_FILES is not less than 4096 and not bigger than 16777216
 if [[ "$SIZE_FILES" -lt 4096 || "$SIZE_FILES" -gt 16777216 ]] ; then
    echo -e "${RED}[ERROR] Attention: The size of the file(s) must be between 4096 and 16777216 Bytes!${NC}"
    usage
