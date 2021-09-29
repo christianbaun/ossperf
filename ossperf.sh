@@ -74,7 +74,6 @@ Arguments:
 exit 0
 }
 
-
 function box_out()
 # https://unix.stackexchange.com/questions/70615/bash-script-echo-output-in-box
 {
@@ -122,7 +121,7 @@ WHITE='\033[0;37m'        # White color
 # If no arguments are provided at all...
 if [ $# -eq 0 ]; then
     echo -e "${RED}[ERROR] No arguments provided! ${OPTARG} ${NC}" 
-    echo -e "${YELLOW}[INFO] You need ro provide at least the number of files and their size with -n <files> and -s <size>${OPTARG} ${NC}\n" 
+    echo -e "${YELLOW}[INFO] You need to provide at least the number of files and their size with -n <files> and -s <size>${OPTARG} ${NC}\n" 
     usage
 fi
 
@@ -155,7 +154,6 @@ while getopts "hn:s:b:uam:zgwrl:d:kpo" ARG ; do
   esac
 done
 
-
 # If neither using the Swift client, the Minio client (mc), the Azure client (az), the s4cmd client 
 # or the Google storage client (gsutil) has been specified via command line parameter...
 if [[ "$MINIO_CLIENT" -ne 1  && "$AZURE_CLI" -ne 1 && "$S4CMD_CLIENT" -ne 1 && "$AWS_CLI_API" -ne 1 && "$GOOGLE_API" -ne 1 && "$SWIFT_API" -ne 1 ]] ; then
@@ -164,34 +162,32 @@ if [[ "$MINIO_CLIENT" -ne 1  && "$AZURE_CLI" -ne 1 && "$S4CMD_CLIENT" -ne 1 && "
    echo -e "${YELLOW}[INFO] ossperf will use the tool s3cmd because no other client tool has been specified via command line parameter.${NC}"
 fi
 
-
 # Check the operating system
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
     # Linux
     echo -e "${YELLOW}[INFO] The operating system is Linux.${NC}"
-    echo ${OSTYPE}
+    echo "${OSTYPE}"
 elif [[ "$OSTYPE" == "freebsd"* ]]; then
     # FreeBSD
     echo -e "${YELLOW}[INFO] The operating system is FreeBSD.${NC}"
-    echo ${OSTYPE}
+    echo "${OSTYPE}"
 elif [[ "$OSTYPE" == "darwin"* ]]; then
     # Mac OS X
     echo -e "${YELLOW}[INFO] The operating system is Mac OS X.${NC}"
-    echo ${OSTYPE}
+    echo "${OSTYPE}"
 elif [[ "$OSTYPE" == "msys" ]]; then
     # Windows 
     echo -e "${YELLOW}[INFO] The operating system is Windows.${NC}"
-    echo ${OSTYPE}
+    echo "${OSTYPE}"
 elif [[ "$OSTYPE" == "cygwin" ]]; then
     # POSIX compatibility layer for Windows
     echo -e "${YELLOW}[INFO] POSIX compatibility layer for Windows detected.${NC}"
-    echo ${OSTYPE}
+    echo "${OSTYPE}"
 else
     # Unknown
     echo -e "${YELLOW}[INFO] The operating system is unknown.${NC}"
-    echo ${OSTYPE}
+    echo "${OSTYPE}"
 fi
-
 
 # Check if the required command line tools are available
 if ! [ -x "$(command -v bash)" ]; then
@@ -283,8 +279,6 @@ if [ "$AWS_CLI_API" -eq 1 ] ; then
     fi
   fi
 fi
-
-
 
 # Only if the user wants to use the Swift API and not the S3 API
 if [ "$SWIFT_API" -eq 1 ] ; then
@@ -399,8 +393,7 @@ if [[ "$SIZE_FILES" -lt 4096 || "$SIZE_FILES" -gt 16777216 ]] ; then
    usage
    exit 1
 fi
- 
- 
+
 # ----------------------------------------------------
 # | Check that we have a working internet connection |
 # ----------------------------------------------------
@@ -426,7 +419,6 @@ while [ $LOOP_VARIABLE -gt "0" ]; do
   fi
 done
 
-
 # ----------------------------------------------
 # | Check that a storage service is accessible |
 # ----------------------------------------------
@@ -444,7 +436,7 @@ if [ "$SWIFT_API" -eq 1 ] ; then
 # <-=-=-=-> mc (start)     <-=-=-=->
 elif [ "$MINIO_CLIENT" -eq 1 ] ; then
   # use the S3 API with mc
-  if mc ls $MINIO_CLIENT_ALIAS; then
+  if mc ls "$MINIO_CLIENT_ALIAS"; then
     echo -e "${GREEN}[OK] The storage service can be accessed via the tool mc.${NC}"
   else
     echo -e "${RED}[ERROR] Unable to access the storage service via the tool mc.${NC}" && exit 1
@@ -483,7 +475,7 @@ elif [ "$AWS_CLI_API" -eq 1 ] ; then
   # If the variable $ENDPOINT_URL_ADDRESS is not empty...
   else
     # use the aws cli with an S3-compatible non-Amazon service (e.g. Minio)
-    if aws --endpoint-url=$ENDPOINT_URL_ADDRESS s3 ls ; then
+    if aws --endpoint-url="$ENDPOINT_URL_ADDRESS" s3 ls ; then
       echo -e "${GREEN}[OK] The storage service can be accessed via the tool aws.${NC}"
     else
       echo -e "${RED}[ERROR] Unable to access the storage service via the tool aws.${NC}" && exit 1
@@ -505,7 +497,7 @@ elif [ "$S4CMD_CLIENT" -eq 1 ] ; then
   # If the variable $ENDPOINT_URL_ADDRESS is not empty...
   else
     # use the s4cmd cli with an S3-compatible non-Amazon service (e.g. Minio)
-    if s4cmd --endpoint-url=$ENDPOINT_URL_ADDRESS ls ; then
+    if s4cmd --endpoint-url="$ENDPOINT_URL_ADDRESS" ls ; then
       echo -e "${GREEN}[OK] The storage service can be accessed via the tool s4cmd.${NC}"
     else
       echo -e "${RED}[ERROR] Unable to access the storage service via the tool s4cmd.${NC}" && exit 1
@@ -547,7 +539,7 @@ fi
 # This is not a part of the benchmark!
 for ((i=1; i<=${NUM_FILES}; i+=1))
 do
-  if dd if=/dev/urandom of=$DIRECTORY/ossperf-testfile$i.txt bs=4096 count=$(($SIZE_FILES/4096)) ; then
+  if dd if=/dev/urandom of=$DIRECTORY/ossperf-testfile"$i".txt bs=4096 count=$(($SIZE_FILES/4096)) ; then
     echo -e "${GREEN}[OK] File with random content has been created.${NC}"
   else
     echo -e "${RED}[ERROR] Unable to create the file.${NC}" && exit 1
@@ -562,9 +554,8 @@ else
   echo -e "${RED}[ERROR] Unable to calculate the checksums and create the MD5SUM file.${NC}" && exit 1
 fi
 
-
 # Start of the 1st time measurement
-TIME_CREATE_BUCKET_START=`date +%s.%N`
+TIME_CREATE_BUCKET_START=$(date +%s.%N)
 
 # -------------------------------
 # | Create a bucket / container |
@@ -582,7 +573,7 @@ if [ "$SWIFT_API" -eq 1 ] ; then
   fi
 elif [ "$MINIO_CLIENT" -eq 1 ] ; then
   # use the S3 API with mc
-  if mc mb $MINIO_CLIENT_ALIAS/$BUCKET; then
+  if mc mb "$MINIO_CLIENT_ALIAS"/$BUCKET; then
     echo -e "${GREEN}[OK] Bucket ${BUCKET} has been created with mc.${NC}"
   else
     echo -e "${RED}[ERROR] Unable to create the bucket ${BUCKET} with mc.${NC}" && exit 1
@@ -598,7 +589,7 @@ elif [ "$GOOGLE_API" -eq 1 ] ; then
   # use the Google API
   if [ "$BUCKET_LOCATION" -eq 1 ] ; then
     # If a specific site (location) for the bucket has been specified via command line parameter
-    if gsutil mb -l $BUCKET_LOCATION_SITE gs://$BUCKET ; then
+    if gsutil mb -l "$BUCKET_LOCATION_SITE" gs://$BUCKET ; then
       echo -e "${GREEN}[OK] Bucket ${BUCKET} has been created with gsutil.${NC}"
     else
       echo -e "${RED}[ERROR] Unable to create the bucket (container) ${BUCKET} with gsutil.${NC}" && exit 1
@@ -624,7 +615,7 @@ elif [ "$AWS_CLI_API" -eq 1 ] ; then
   # If the variable $ENDPOINT_URL_ADDRESS is not empty...
   else
     # use the aws cli with an S3-compatible non-Amazon service (e.g. Minio)
-    if aws --endpoint-url=$ENDPOINT_URL_ADDRESS s3 mb s3://$BUCKET ; then
+    if aws --endpoint-url="$ENDPOINT_URL_ADDRESS" s3 mb s3://$BUCKET ; then
       echo -e "${GREEN}[OK] Bucket ${BUCKET} has been created with aws.${NC}"
     else
       echo -e "${RED}[ERROR] Unable to create the bucket (container) ${BUCKET} with aws.${NC}" && exit 1
@@ -644,7 +635,7 @@ elif [ "$S4CMD_CLIENT" -eq 1 ] ; then
   # If the variable $ENDPOINT_URL_ADDRESS is not empty...
   else
     # use the s4cmd cli with an S3-compatible non-Amazon service (e.g. Minio)
-    if s4cmd --endpoint-url=$ENDPOINT_URL_ADDRESS mb s3://$BUCKET ; then
+    if s4cmd --endpoint-url="$ENDPOINT_URL_ADDRESS" mb s3://$BUCKET ; then
       echo -e "${GREEN}[OK] Bucket ${BUCKET} has been created with s4cmd.${NC}"
     else
       echo -e "${RED}[ERROR] Unable to create the bucket (container) ${BUCKET} with s4cmd.${NC}" && exit 1
@@ -655,7 +646,7 @@ else
   # use the s3cmd cli
   if [ "$BUCKET_LOCATION" -eq 1 ] ; then
     # If a specific site (location) for the bucket has been specified via command line parameter
-    if s3cmd mb s3://$BUCKET --bucket-location=$BUCKET_LOCATION_SITE ; then
+    if s3cmd mb s3://$BUCKET --bucket-location="$BUCKET_LOCATION_SITE" ; then
       echo -e "${GREEN}[OK] Bucket ${BUCKET} has been created with s3cmd.${NC}"
     else
       echo -e "${RED}[ERROR] Unable to create the bucket ${BUCKET} with s3cmd.${NC}" && exit 1
@@ -671,13 +662,13 @@ else
 fi
 
 # End of the 1st time measurement
-TIME_CREATE_BUCKET_END=`date +%s.%N`
+TIME_CREATE_BUCKET_END=$(date +%s.%N)
 
 # Duration of the 1st time measurement
 # The "/1" is stupid, but it is required to get the "scale" working.
 # Otherwise the "scale" is just ignored
 # The sed command ensures that results < 1 have a leading 0 before the "."
-TIME_CREATE_BUCKET=`echo "scale=3 ; (${TIME_CREATE_BUCKET_END} - ${TIME_CREATE_BUCKET_START})/1" | bc | sed 's/^\./0./'`
+TIME_CREATE_BUCKET=$(echo "scale=3 ; (${TIME_CREATE_BUCKET_END} - ${TIME_CREATE_BUCKET_START})/1" | bc | sed 's/^\./0./')
 
 # Wait a moment. Sometimes, the services cannot provide fresh created buckets this quick
 sleep 1
@@ -706,7 +697,6 @@ if [ "$S3PERF_CLIENT" -eq 1 ] ; then
     fi
   done
 fi
-
 
 # If we use the tool gsutil...
 if [ "$GOOGLE_API" -eq 1 ] ; then
@@ -755,7 +745,7 @@ if [ "$AWS_CLI_API" -eq 1 ] ; then
     else
       # use the aws cli with an S3-compatible non-Amazon service (e.g. Minio)
       # Check if the Bucket is accessible
-      if aws --endpoint-url=$ENDPOINT_URL_ADDRESS s3 ls s3://$BUCKET ; then
+      if aws --endpoint-url="$ENDPOINT_URL_ADDRESS" s3 ls s3://$BUCKET ; then
         echo -e "${GREEN}[OK] The bucket is available (checked with aws).${NC}"
         # Skip entire rest of loop.
         break
@@ -796,7 +786,7 @@ if [ "$S4CMD_CLIENT" -eq 1 ] ; then
     else
       # use the aws s4cmd with an S3-compatible non-Amazon service (e.g. Minio)
       # Check if the Bucket is accessible
-      if s4cmd --endpoint-url=$ENDPOINT_URL_ADDRESS ls s3://$BUCKET ; then
+      if s4cmd --endpoint-url="$ENDPOINT_URL_ADDRESS" ls s3://$BUCKET ; then
         echo -e "${GREEN}[OK] The bucket is available (checked with s4cmd).${NC}"
         # Skip entire rest of loop.
         break
@@ -818,7 +808,7 @@ if [ "$MINIO_CLIENT" -eq 1 ] ; then
   # until LOOP_VARIABLE is greater than 0 
   while [ $LOOP_VARIABLE -gt "0" ]; do 
     # Check if the Bucket is accessible
-    if mc ls $MINIO_CLIENT_ALIAS/$BUCKET ; then
+    if mc ls "$MINIO_CLIENT_ALIAS"/$BUCKET ; then
       echo -e "${GREEN}[OK] The bucket is available (checked with mc).${NC}"
       # Skip entire rest of loop.
       break
@@ -832,11 +822,8 @@ if [ "$MINIO_CLIENT" -eq 1 ] ; then
   done
 fi
 
-
-
 # Start of the 2nd time measurement
-TIME_OBJECTS_UPLOAD_START=`date +%s.%N`
-
+TIME_OBJECTS_UPLOAD_START=$(date +%s.%N)
 
 # ------------------------------
 # | Upload the Files (Objects) |
@@ -859,7 +846,7 @@ if [ "$PARALLEL" -eq 1 ] ; then
   elif [ "$MINIO_CLIENT" -eq 1 ] ; then
   # use the S3 API with mc
     # Upload files in parallel
-    if find $DIRECTORY/*.txt | parallel mc cp {} $MINIO_CLIENT_ALIAS/$BUCKET  ; then
+    if find $DIRECTORY/*.txt | parallel mc cp {} "$MINIO_CLIENT_ALIAS"/$BUCKET  ; then
       echo -e "${GREEN}[OK] Files have been uploaded in parallel with mc.${NC}"
     else
       echo -e "${RED}[ERROR] Unable to upload the files in parallel with mc.${NC}" && exit 1
@@ -898,7 +885,7 @@ if [ "$PARALLEL" -eq 1 ] ; then
     # If the variable $ENDPOINT_URL_ADDRESS is not empty...
     else
       # use the aws cli with an S3-compatible non-Amazon service (e.g. Minio)
-      if find $DIRECTORY/*.txt -type f -printf  "%f\n" | parallel aws --endpoint-url=$ENDPOINT_URL_ADDRESS s3 cp $DIRECTORY/{} s3://$BUCKET/{} ; then
+      if find $DIRECTORY/*.txt -type f -printf  "%f\n" | parallel aws --endpoint-url="$ENDPOINT_URL_ADDRESS" s3 cp $DIRECTORY/{} s3://$BUCKET/{} ; then
         echo -e "${GREEN}[OK] Files have been uploaded in parallel with aws.${NC}"
       else
         echo -e "${RED}[ERROR] Unable to upload the files in parallel with aws.${NC}" && exit 1
@@ -921,7 +908,7 @@ if [ "$PARALLEL" -eq 1 ] ; then
     # If the variable $ENDPOINT_URL_ADDRESS is not empty...
     else
       # use the s4cmd cli with an S3-compatible non-Amazon service (e.g. Minio)
-      if find $DIRECTORY/*.txt -type f -printf  "%f\n" | parallel s4cmd --endpoint-url=$ENDPOINT_URL_ADDRESS put $DIRECTORY/{} s3://$BUCKET/{} ; then
+      if find $DIRECTORY/*.txt -type f -printf  "%f\n" | parallel s4cmd --endpoint-url="$ENDPOINT_URL_ADDRESS" put $DIRECTORY/{} s3://$BUCKET/{} ; then
         echo -e "${GREEN}[OK] Files have been uploaded in parallel with s4cmd.${NC}"
       else
         echo -e "${RED}[ERROR] Unable to upload the files in parallel with s4cmd.${NC}" && exit 1
@@ -951,7 +938,7 @@ else
   elif [ "$MINIO_CLIENT" -eq 1 ] ; then
   # use the S3 API with mc
     # Upload files sequentially
-    if mc cp $DIRECTORY/*.txt $MINIO_CLIENT_ALIAS/$BUCKET ; then
+    if mc cp $DIRECTORY/*.txt "$MINIO_CLIENT_ALIAS"/$BUCKET ; then
       echo -e "${GREEN}[OK] Files have been uploaded sequentially with mc.${NC}"
     else
       echo -e "${RED}[ERROR] Unable to upload the files sequentially with mc.${NC}" && exit 1
@@ -986,7 +973,7 @@ else
     # If the variable $ENDPOINT_URL_ADDRESS is not empty...
     else
       # use the aws cli with an S3-compatible non-Amazon service (e.g. Minio)
-      if aws --endpoint-url=$ENDPOINT_URL_ADDRESS s3 cp $DIRECTORY/ s3://$BUCKET --recursive --exclude "*" --include "*.txt" ; then
+      if aws --endpoint-url="$ENDPOINT_URL_ADDRESS" s3 cp $DIRECTORY/ s3://$BUCKET --recursive --exclude "*" --include "*.txt" ; then
         echo -e "${GREEN}[OK] Files have been uploaded sequentially with aws.${NC}"
       else
         echo -e "${RED}[ERROR] Unable to upload the files sequentially with aws.${NC}" && exit 1
@@ -1006,7 +993,7 @@ else
     # If the variable $ENDPOINT_URL_ADDRESS is not empty...
     else
       # use the s4cmd cli with an S3-compatible non-Amazon service (e.g. Minio)
-      if s4cmd --endpoint-url=$ENDPOINT_URL_ADDRES put $DIRECTORY/*.txt s3://$BUCKET ; then
+      if s4cmd --endpoint-url="$ENDPOINT_URL_ADDRES" put $DIRECTORY/*.txt s3://$BUCKET ; then
         echo -e "${GREEN}[OK] Files have been uploaded sequentially with s4cmd.${NC}"
       else
         echo -e "${RED}[ERROR] Unable to upload the files sequentially with s4cmd.${NC}" && exit 1
@@ -1024,15 +1011,13 @@ else
 fi
 
 # End of the 2nd time measurement
-TIME_OBJECTS_UPLOAD_END=`date +%s.%N`
-
+TIME_OBJECTS_UPLOAD_END=$(date +%s.%N)
 
 # Duration of the 2nd time measurement
 # The "/1" is stupid, but it is required to get the "scale" working.
 # Otherwise the "scale" is just ignored
 # The sed command ensures that results < 1 have a leading 0 before the "."
-TIME_OBJECTS_UPLOAD=`echo "scale=3 ; (${TIME_OBJECTS_UPLOAD_END} - ${TIME_OBJECTS_UPLOAD_START})/1" | bc | sed 's/^\./0./'`
-
+TIME_OBJECTS_UPLOAD=$(echo "scale=3 ; (${TIME_OBJECTS_UPLOAD_END} - ${TIME_OBJECTS_UPLOAD_START})/1" | bc | sed 's/^\./0./')
 
 # Calculate the bandwidth
 # ((Size of the objects * number of objects * 8 bits per byte) / TIME_OBJECTS_UPLOAD) and next
@@ -1040,15 +1025,13 @@ TIME_OBJECTS_UPLOAD=`echo "scale=3 ; (${TIME_OBJECTS_UPLOAD_END} - ${TIME_OBJECT
 # The "/1" is stupid, but it is required to get the "scale" working.
 # Otherwise the "scale" is just ignored
 # The sed command ensures that results < 1 have a leading 0 before the "."
-BANDWIDTH_OBJECTS_UPLOAD=`echo "scale=3 ; ((((${SIZE_FILES} * ${NUM_FILES} * 8) / ${TIME_OBJECTS_UPLOAD}) / 1000) / 1000) / 1" | bc | sed 's/^\./0./'`
-
+BANDWIDTH_OBJECTS_UPLOAD=$(echo "scale=3 ; ((((${SIZE_FILES} * ${NUM_FILES} * 8) / ${TIME_OBJECTS_UPLOAD}) / 1000) / 1000) / 1" | bc | sed 's/^\./0./')
 
 # Wait a moment. Sometimes, the services cannot provide fresh uploaded files this quick
 sleep 1
 
 # Start of the 3rd time measurement
-TIME_OBJECTS_LIST_START=`date +%s.%N`
-
+TIME_OBJECTS_LIST_START=$(date +%s.%N)
 
 # --------------------------------------------
 # | List files inside the bucket / container |
@@ -1066,7 +1049,7 @@ if [ "$SWIFT_API" -eq 1 ] ; then
   fi
 elif [ "$MINIO_CLIENT" -eq 1 ] ; then
   # use the S3 API with mc
-  if mc ls $MINIO_CLIENT_ALIAS/$BUCKET; then
+  if mc ls "$MINIO_CLIENT_ALIAS"/$BUCKET; then
     echo -e "${GREEN}[OK] The list of objects inside ${BUCKET} has been fetched with mc.${NC}"
   else
     echo -e "${RED}[ERROR] Unable to fetch the list of objects inside ${BUCKET} with mc.${NC}" && exit 1
@@ -1099,7 +1082,7 @@ elif [ "$AWS_CLI_API" -eq 1 ] ; then
   # If the variable $ENDPOINT_URL_ADDRESS is not empty...
   else
     # use the aws cli with an S3-compatible non-Amazon service (e.g. Minio)
-    if aws --endpoint-url=$ENDPOINT_URL_ADDRESS s3 ls s3://$BUCKET ; then
+    if aws --endpoint-url="$ENDPOINT_URL_ADDRESS" s3 ls s3://$BUCKET ; then
       echo -e "${GREEN}[OK] The list of objects inside ${BUCKET} has been fetched with aws.${NC}"
     else
       echo -e "${RED}[ERROR] Unable to fetch the list of objects inside ${BUCKET} with aws.${NC}" && exit 1
@@ -1119,7 +1102,7 @@ elif [ "$S4CMD_CLIENT" -eq 1 ] ; then
   # If the variable $ENDPOINT_URL_ADDRESS is not empty...
   else
     # use the s4cmd cli with an S3-compatible non-Amazon service (e.g. Minio)
-    if s4cmd --endpoint-url=$ENDPOINT_URL_ADDRESS ls s3://$BUCKET ; then
+    if s4cmd --endpoint-url="$ENDPOINT_URL_ADDRESS" ls s3://$BUCKET ; then
       echo -e "${GREEN}[OK] The list of objects inside ${BUCKET} has been fetched with s4cmd.${NC}"
     else
       echo -e "${RED}[ERROR] Unable to fetch the list of objects inside ${BUCKET} with s4cmd.${NC}" && exit 1
@@ -1135,17 +1118,16 @@ else
 fi
 
 # End of the 3rd time measurement
-TIME_OBJECTS_LIST_END=`date +%s.%N`
+TIME_OBJECTS_LIST_END=$(date +%s.%N)
 
 # Duration of the 3rd time measurement
 # The "/1" is stupid, but it is required to get the "scale" working.
 # Otherwise the "scale" is just ignored
 # The sed command ensures that results < 1 have a leading 0 before the "."
-TIME_OBJECTS_LIST=`echo "scale=3 ; (${TIME_OBJECTS_LIST_END} - ${TIME_OBJECTS_LIST_START})/1" | bc | sed 's/^\./0./'`
-
+TIME_OBJECTS_LIST=$(echo "scale=3 ; (${TIME_OBJECTS_LIST_END} - ${TIME_OBJECTS_LIST_START})/1" | bc | sed 's/^\./0./')
 
 # Start of the 4th time measurement
-TIME_OBJECTS_DOWNLOAD_START=`date +%s.%N`
+TIME_OBJECTS_DOWNLOAD_START=$(date +%s.%N)
 
 # --------------------------------
 # | Download the files (objects) |
@@ -1170,7 +1152,7 @@ if [ "$PARALLEL" -eq 1 ] ; then
   # use the S3 API with mc
     # Download files in parallel
     # This removes the subfolder name(s) in the output of find: -type f -printf  "%f\n"
-    if find $DIRECTORY/*.txt -type f -printf  "%f\n" | parallel mc cp $MINIO_CLIENT_ALIAS/$BUCKET/{} $DIRECTORY ; then
+    if find $DIRECTORY/*.txt -type f -printf  "%f\n" | parallel mc cp "$MINIO_CLIENT_ALIAS"/$BUCKET/{} $DIRECTORY ; then
       echo -e "${GREEN}[OK] Files have been downloaded in parallel with mc.${NC}"
     else
       echo -e "${RED}[ERROR] Unable to download the files in parallel with mc.${NC}" && exit 1
@@ -1211,7 +1193,7 @@ if [ "$PARALLEL" -eq 1 ] ; then
     # If the variable $ENDPOINT_URL_ADDRESS is not empty...
     else
       # use the aws cli with an S3-compatible non-Amazon service (e.g. Minio)
-      if find ${DIRECTORY}/*.txt -type f -printf "%f\n" | parallel aws --endpoint-url=$ENDPOINT_URL_ADDRESS s3 cp s3://$BUCKET/{} $DIRECTORY/{} ; then
+      if find ${DIRECTORY}/*.txt -type f -printf "%f\n" | parallel aws --endpoint-url="$ENDPOINT_URL_ADDRESS" s3 cp s3://$BUCKET/{} $DIRECTORY/{} ; then
         echo -e "${GREEN}[OK] Files have been downloaded in parallel with aws.${NC}"
       else
         echo -e "${RED}[ERROR] Unable to download the files in parallel with aws.${NC}" && exit 1
@@ -1239,7 +1221,7 @@ else
   elif [ "$MINIO_CLIENT" -eq 1 ] ; then
   # use the S3 API with mc
     # Download files sequentially
-    if mc cp -r $MINIO_CLIENT_ALIAS/$BUCKET $DIRECTORY ; then
+    if mc cp -r "$MINIO_CLIENT_ALIAS"/$BUCKET $DIRECTORY ; then
       # mc has up to now not the feature to copy the files directly into the desired folder.
       # All we can do here is to copy the entire bucket in to the folder as a subfolder and 
       # later move the files from the subfolder to the desired destination and afterwards 
@@ -1281,7 +1263,7 @@ else
       fi
     else
       # use the aws cli with an S3-compatible non-Amazon service (e.g. Minio)
-      if aws --endpoint-url=$ENDPOINT_URL_ADDRESS s3 cp s3://$BUCKET $DIRECTORY --recursive ; then
+      if aws --endpoint-url="$ENDPOINT_URL_ADDRESS" s3 cp s3://$BUCKET $DIRECTORY --recursive ; then
         echo -e "${GREEN}[OK] Files have been downloaded sequentially with aws.${NC}"
       else
         echo -e "${RED}[ERROR] Unable to download the files sequentially with aws.${NC}" && exit 1
@@ -1299,14 +1281,13 @@ else
 fi
 
 # End of the 4th time measurement
-TIME_OBJECTS_DOWNLOAD_END=`date +%s.%N`
+TIME_OBJECTS_DOWNLOAD_END=$(date +%s.%N)
 
 # Duration of the 4th time measurement
 # The "/1" is stupid, but it is required to get the "scale" working.
 # Otherwise the "scale" is just ignored
 # The sed command ensures that results < 1 have a leading 0 before the "."
-TIME_OBJECTS_DOWNLOAD=`echo "scale=3 ; (${TIME_OBJECTS_DOWNLOAD_END} - ${TIME_OBJECTS_DOWNLOAD_START})/1" | bc | sed 's/^\./0./'`
-
+TIME_OBJECTS_DOWNLOAD=$(echo "scale=3 ; (${TIME_OBJECTS_DOWNLOAD_END} - ${TIME_OBJECTS_DOWNLOAD_START})/1" | bc | sed 's/^\./0./')
 
 # Validate the checksums of the files
 # This is not a part of the benchmark!
@@ -1316,18 +1297,16 @@ else
   echo -e "${RED}[ERROR] The checksums do not match the files.${NC}" && exit 1
 fi
 
-
 # Calculate the bandwidth
 # ((Size of the objects * number of objects * 8 bits per byte) / TIME_OBJECTS_DOWNLOAD) and next
 # convert to Megabit per second
 # The "/1" is stupid, but it is required to get the "scale" working.
 # Otherwise the "scale" is just ignored
 # The sed command ensures that results < 1 have a leading 0 before the "."
-BANDWIDTH_OBJECTS_DOWNLOAD=`echo "scale=3 ; ((((${SIZE_FILES} * ${NUM_FILES} * 8) / ${TIME_OBJECTS_DOWNLOAD}) / 1000) / 1000) / 1" | bc | sed 's/^\./0./'`
-
+BANDWIDTH_OBJECTS_DOWNLOAD=$(echo "scale=3 ; ((((${SIZE_FILES} * ${NUM_FILES} * 8) / ${TIME_OBJECTS_DOWNLOAD}) / 1000) / 1000) / 1" | bc | sed 's/^\./0./')
 
 # Start of the 5th time measurement
-TIME_ERASE_OBJECTS_START=`date +%s.%N`
+TIME_ERASE_OBJECTS_START=$(date +%s.%N)
 
 # -----------------------------
 # | Erase the files (objects) |
@@ -1350,7 +1329,7 @@ if [ "$PARALLEL" -eq 1 ] ; then
   elif [ "$MINIO_CLIENT" -eq 1 ] ; then
   # use the S3 API with mc
     # Erase files (objects) inside the bucket that are newer than 100 days
-    if mc rm -r --force --newer-than 100d $MINIO_CLIENT_ALIAS/$BUCKET  ; then
+    if mc rm -r --force --newer-than 100d "$MINIO_CLIENT_ALIAS"/$BUCKET  ; then
       echo -e "${GREEN}[OK] Files inside the bucket ${BUCKET} have been erased with mc.${NC}"
     else
       echo -e "${RED}[ERROR] Unable to erase the files inside the bucket ${BUCKET} with mc.${NC}" && exit 1
@@ -1359,8 +1338,8 @@ if [ "$PARALLEL" -eq 1 ] ; then
   # use the Azure CLI
     # Erase files (objects) inside the bucket in parallel
     # The Azure CLI delete in parallel per default and can't use GNU Parallel.
-    for i in `az storage blob list --container-name $BUCKET --output table | awk '{print $1}'| sed '1,2d' | sed '/^$/d'` ; do
-      if az storage blob delete --name $i --container-name $BUCKET >/dev/null ; then
+    for i in $(az storage blob list --container-name $BUCKET --output table | awk '{print $1}'| sed '1,2d' | sed '/^$/d') ; do
+      if az storage blob delete --name "$i" --container-name $BUCKET >/dev/null ; then
         echo -e "${GREEN}[OK] File $i inside the $BUCKET have been erased in parallel with az.${NC}"
       else
         echo -e "${RED}[ERROR] Unable to erase the file $i inside the $BUCKET in parallel with az.${NC}" && exit 1
@@ -1389,7 +1368,7 @@ if [ "$PARALLEL" -eq 1 ] ; then
     # If the variable $ENDPOINT_URL_ADDRESS is not empty...
     else
       # use the aws cli with an S3-compatible non-Amazon service (e.g. Minio)
-      if find ${DIRECTORY}/*.txt -type f -printf "%f\n" | parallel aws --endpoint-url=$ENDPOINT_URL_ADDRESS s3 rm s3://$BUCKET/{} ; then
+      if find ${DIRECTORY}/*.txt -type f -printf "%f\n" | parallel aws --endpoint-url="$ENDPOINT_URL_ADDRESS" s3 rm s3://$BUCKET/{} ; then
         echo -e "${GREEN}[OK] Files inside the bucket (container) ${BUCKET} have been erased in parallel with aws.${NC}"
       else
         echo -e "${RED}[ERROR] Unable to erase the files inside the bucket (container) ${BUCKET} in parallel with aws.${NC}" && exit 1
@@ -1410,7 +1389,7 @@ if [ "$PARALLEL" -eq 1 ] ; then
     # If the variable $ENDPOINT_URL_ADDRESS is not empty...
     else
       # use the s4cmd cli with an S3-compatible non-Amazon service (e.g. Minio)
-      if find ${DIRECTORY}/*.txt -type f -printf "%f\n" | parallel s4cmd --endpoint-url=$ENDPOINT_URL_ADDRESS del s3://$BUCKET/{} ; then
+      if find ${DIRECTORY}/*.txt -type f -printf "%f\n" | parallel s4cmd --endpoint-url="$ENDPOINT_URL_ADDRESS" del s3://$BUCKET/{} ; then
         echo -e "${GREEN}[OK] Files inside the bucket (container) ${BUCKET} have been erased in parallel with s4cmd.${NC}"
       else
         echo -e "${RED}[ERROR] Unable to erase the files inside the bucket (container) ${BUCKET} in parallel with s4cmd.${NC}" && exit 1
@@ -1439,7 +1418,7 @@ else
   # use the S3 API with mc
     # Erase files (objects) inside the bucket and the bucket itself sequentially
     # Up to now it is impossible to erase just the files inside a bucket
-    if mc rm -r --force $MINIO_CLIENT_ALIAS/$BUCKET  ; then
+    if mc rm -r --force "$MINIO_CLIENT_ALIAS"/$BUCKET  ; then
       echo -e "${GREEN}[OK] Files inside the bucket ${BUCKET} and the bucket itself have been erased sequentially with mc.${NC}"
     else
       echo -e "${RED}[ERROR] Unable to erase the files inside the bucket ${BUCKET} sequentially with mc.${NC}" && exit 1
@@ -1447,8 +1426,8 @@ else
   elif [ "$AZURE_CLI" -eq 1 ] ; then
   # use the Azure CLI
     # Erase files (objects) inside the bucket sequentially
-    for i in `az storage blob list --container-name $BUCKET --output table | awk '{print $1}'| sed '1,2d' | sed '/^$/d'` ; do
-      if az storage blob delete --name $i --container-name $BUCKET >/dev/null ; then
+    for i in $(az storage blob list --container-name $BUCKET --output table | awk '{print $1}'| sed '1,2d' | sed '/^$/d') ; do
+      if az storage blob delete --name "$i" --container-name $BUCKET >/dev/null ; then
         echo -e "${GREEN}[OK] File $i inside the $BUCKET have been erased sequentially with az.${NC}"
       else
         echo -e "${RED}[ERROR] Unable to erase the file $i inside the $BUCKET sequentially with az.${NC}" && exit 1
@@ -1477,7 +1456,7 @@ else
     # If the variable $ENDPOINT_URL_ADDRESS is not empty...
     else
       # use the aws cli with an S3-compatible non-Amazon service (e.g. Minio)
-      if aws --endpoint-url=$ENDPOINT_URL_ADDRESS s3 rm s3://$BUCKET --recursive --include "*" ; then
+      if aws --endpoint-url="$ENDPOINT_URL_ADDRESS" s3 rm s3://$BUCKET --recursive --include "*" ; then
         echo -e "${GREEN}[OK] Files inside the bucket (container) ${BUCKET} have been erased sequentially with aws.${NC}"
       else
         echo -e "${RED}[ERROR] Unable to erase the files inside the bucket (container) ${BUCKET} sequentially with aws.${NC}" && exit 1
@@ -1498,7 +1477,7 @@ else
     # If the variable $ENDPOINT_URL_ADDRESS is not empty...
     else
       # use the s4cmd cli with an S3-compatible non-Amazon service (e.g. Minio)
-      if s4cmd --endpoint-url=$ENDPOINT_URL_ADDRESS del s3://$BUCKET/*.txt ; then
+      if s4cmd --endpoint-url="$ENDPOINT_URL_ADDRESS" del s3://$BUCKET/*.txt ; then
         echo -e "${GREEN}[OK] Files inside the bucket (container) ${BUCKET} have been erased sequentially with s4cmd.${NC}"
       else
         echo -e "${RED}[ERROR] Unable to erase the files inside the bucket (container) ${BUCKET} sequentially with s4cmd.${NC}" && exit 1
@@ -1513,23 +1492,19 @@ else
       echo -e "${RED}[ERROR] Unable to erase the files inside the bucket ${BUCKET} sequentially with s3cmd.${NC}" && exit 1
     fi
   fi
-fi  
+fi
 
 # End of the 5th time measurement
-TIME_ERASE_OBJECTS_END=`date +%s.%N`
-
+TIME_ERASE_OBJECTS_END=$(date +%s.%N)
 
 # Duration of the 5th time measurement
 # The "/1" is stupid, but it is required to get the "scale" working.
 # Otherwise the "scale" is just ignored
 # The sed command ensures that results < 1 have a leading 0 before the "."
-TIME_ERASE_OBJECTS=`echo "scale=3 ; (${TIME_ERASE_OBJECTS_END} - ${TIME_ERASE_OBJECTS_START})/1" | bc | sed 's/^\./0./'`
-
-
-
+TIME_ERASE_OBJECTS=$(echo "scale=3 ; (${TIME_ERASE_OBJECTS_END} - ${TIME_ERASE_OBJECTS_START})/1" | bc | sed 's/^\./0./')
 
 # Start of the 6th time measurement
-TIME_ERASE_BUCKET_START=`date +%s.%N`
+TIME_ERASE_BUCKET_START=$(date +%s.%N)
 
 # --------------------------------
 # | Erase the bucket / container |
@@ -1547,7 +1522,7 @@ if [ "$SWIFT_API" -eq 1 ] ; then
   fi
 elif [ "$MINIO_CLIENT" -eq 1 ] ; then
   # use the S3 API with mc
-  if mc rb --force $MINIO_CLIENT_ALIAS/$BUCKET; then
+  if mc rb --force "$MINIO_CLIENT_ALIAS"/$BUCKET; then
     echo -e "${GREEN}[OK] Bucket ${BUCKET} has been erased with mc.${NC}"
   else
     echo -e "${RED}[ERROR] Unable to erase the bucket ${BUCKET} with mc.${NC}" && exit 1
@@ -1579,7 +1554,7 @@ elif [ "$AWS_CLI_API" -eq 1 ] ; then
   # If the variable $ENDPOINT_URL_ADDRESS is not empty...
   else
     # use the aws cli with an S3-compatible non-Amazon service (e.g. Minio)
-    if aws --endpoint-url=$ENDPOINT_URL_ADDRESS s3 rb s3://$BUCKET ; then
+    if aws --endpoint-url="$ENDPOINT_URL_ADDRESS" s3 rb s3://$BUCKET ; then
     echo -e "${GREEN}[OK] Bucket (Container) ${BUCKET} has been erased with aws.${NC}"
     else
       echo -e "${RED}[ERROR] Unable to erase the bucket (container) ${BUCKET} with aws.${NC}" && exit 1
@@ -1598,7 +1573,7 @@ elif [ "$S4CMD_CLIENT" -eq 1 ] ; then
   # If the variable $ENDPOINT_URL_ADDRESS is not empty...
   else
     # use the s4cmd cli with an S3-compatible non-Amazon service (e.g. Minio)
-    if s4cmd --recursive --endpoint-url=$ENDPOINT_URL_ADDRESS del s3://$BUCKET ; then
+    if s4cmd --recursive --endpoint-url="$ENDPOINT_URL_ADDRESS" del s3://$BUCKET ; then
     echo -e "${GREEN}[OK] Bucket (Container) ${BUCKET} has been erased with s4cmd.${NC}"
     else
       echo -e "${RED}[ERROR] Unable to erase the bucket (container) ${BUCKET} with s4cmd.${NC}" && exit 1
@@ -1614,13 +1589,13 @@ else
 fi
 
 # End of the 6th time measurement
-TIME_ERASE_BUCKET_END=`date +%s.%N`
+TIME_ERASE_BUCKET_END=$(date +%s.%N)
 
 # Duration of the 6th time measurement
 # The "/1" is stupid, but it is required to get the "scale" working.
 # Otherwise the "scale" is just ignored
 # The sed command ensures that results < 1 have a leading 0 before the "."
-TIME_ERASE_BUCKET=`echo "scale=3 ; (${TIME_ERASE_BUCKET_END} - ${TIME_ERASE_BUCKET_START})/1" | bc | sed 's/^\./0./'`
+TIME_ERASE_BUCKET=$(echo "scale=3 ; (${TIME_ERASE_BUCKET_END} - ${TIME_ERASE_BUCKET_START})/1" | bc | sed 's/^\./0./')
 
 # If the "not clean up" flag has not been set, erase the local directory with the files
 if [ "$NOT_CLEAN_UP" -ne 1 ] ; then
@@ -1632,19 +1607,19 @@ if [ "$NOT_CLEAN_UP" -ne 1 ] ; then
   fi
 fi
 
-echo '[1] Required time to create the bucket:                 '${TIME_CREATE_BUCKET} s
-echo '[2] Required time to upload the files:                  '${TIME_OBJECTS_UPLOAD} s
-echo '[3] Required time to fetch a list of files:             '${TIME_OBJECTS_LIST} s
-echo '[4] Required time to download the files:                '${TIME_OBJECTS_DOWNLOAD} s
-echo '[5] Required time to erase the objects:                 '${TIME_ERASE_OBJECTS} s
-echo '[6] Required time to erase the bucket:                  '${TIME_ERASE_BUCKET} s
+echo '[1] Required time to create the bucket:                 '"${TIME_CREATE_BUCKET}" s
+echo '[2] Required time to upload the files:                  '"${TIME_OBJECTS_UPLOAD}" s
+echo '[3] Required time to fetch a list of files:             '"${TIME_OBJECTS_LIST}" s
+echo '[4] Required time to download the files:                '"${TIME_OBJECTS_DOWNLOAD}" s
+echo '[5] Required time to erase the objects:                 '"${TIME_ERASE_OBJECTS}" s
+echo '[6] Required time to erase the bucket:                  '"${TIME_ERASE_BUCKET}" s
 
-TIME_SUM=`echo "scale=3 ; (${TIME_CREATE_BUCKET} + ${TIME_OBJECTS_UPLOAD} + ${TIME_OBJECTS_LIST} + ${TIME_OBJECTS_DOWNLOAD} + ${TIME_ERASE_OBJECTS} + ${TIME_ERASE_BUCKET})/1" | bc | sed 's/^\./0./'`
+TIME_SUM=$(echo "scale=3 ; (${TIME_CREATE_BUCKET} + ${TIME_OBJECTS_UPLOAD} + ${TIME_OBJECTS_LIST} + ${TIME_OBJECTS_DOWNLOAD} + ${TIME_ERASE_OBJECTS} + ${TIME_ERASE_BUCKET})/1" | bc | sed 's/^\./0./')
 
-echo '    Required time to perform all S3-related operations: '${TIME_SUM} s
+echo '    Required time to perform all S3-related operations: '"${TIME_SUM}" s
 echo ''
-echo '    Bandwidth during the upload of the files:           '${BANDWIDTH_OBJECTS_UPLOAD} Mbps
-echo '    Bandwidth during the download of the files:         '${BANDWIDTH_OBJECTS_DOWNLOAD} Mbps
+echo '    Bandwidth during the upload of the files:           '"${BANDWIDTH_OBJECTS_UPLOAD}" Mbps
+echo '    Bandwidth during the download of the files:         '"${BANDWIDTH_OBJECTS_DOWNLOAD}" Mbps
 
 # Create an output file only of the command line parameter was set => value of OUTPUT_FILE is not equal 0
 if ([[ "$OUTPUT_FILE" -ne 0 ]]) ; then
@@ -1658,9 +1633,11 @@ if ([[ "$OUTPUT_FILE" -ne 0 ]]) ; then
     fi
   fi
   # If the output file did already exist...
-  if echo -e "`date +%Y-%m-%d` `date +%H:%M:%S` ${NUM_FILES} ${SIZE_FILES} ${TIME_CREATE_BUCKET} ${TIME_OBJECTS_UPLOAD} ${TIME_OBJECTS_LIST} ${TIME_OBJECTS_DOWNLOAD} ${TIME_ERASE_OBJECTS} ${TIME_ERASE_BUCKET} ${TIME_SUM} ${BANDWIDTH_OBJECTS_UPLOAD} ${BANDWIDTH_OBJECTS_DOWNLOAD}" >> ${OUTPUT_FILENAME} ; then
+  if echo -e "$(date +%Y-%m-%d) $(date +%H:%M:%S) ${NUM_FILES} ${SIZE_FILES} ${TIME_CREATE_BUCKET} ${TIME_OBJECTS_UPLOAD} ${TIME_OBJECTS_LIST} ${TIME_OBJECTS_DOWNLOAD} ${TIME_ERASE_OBJECTS} ${TIME_ERASE_BUCKET} ${TIME_SUM} ${BANDWIDTH_OBJECTS_UPLOAD} ${BANDWIDTH_OBJECTS_DOWNLOAD}" >> ${OUTPUT_FILENAME} ; then
     echo -e "${GREEN}[OK] The results of this benchmark run have been appended to the output file ${OUTPUT_FILENAME}.${NC}"
   else
     echo -e "${RED}[ERROR] Unable to append the results of this benchmark run to the output file ${OUTPUT_FILENAME}.${NC}" && exit 1
   fi
 fi
+
+exit 0
