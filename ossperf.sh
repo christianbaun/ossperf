@@ -993,7 +993,7 @@ else
     # If the variable $ENDPOINT_URL_ADDRESS is not empty...
     else
       # use the s4cmd cli with an S3-compatible non-Amazon service (e.g. Minio)
-      if s4cmd --endpoint-url="$ENDPOINT_URL_ADDRESS" put $DIRECTORY/*.txt s3://$BUCKET/ -s -f ; then
+      if s4cmd --endpoint-url="$ENDPOINT_URL_ADDRESS" put $DIRECTORY/*.txt s3://$BUCKET/ ; then
         echo -e "${GREEN}[OK] Files have been uploaded sequentially with s4cmd.${NC}"
       else
         echo -e "${RED}[ERROR] Unable to upload the files sequentially with s4cmd.${NC}" && exit 1
