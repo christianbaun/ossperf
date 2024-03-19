@@ -7,8 +7,8 @@
 # contributors: Rosa Maria Spanou, Marius Wernicke, Makarov Alexandr, Brian_P, agracie, justinjrestivo
 # url:          https://github.com/christianbaun/ossperf
 # license:      GPLv3
-# date:         September 29th 2021
-# version:      1.06
+# date:         March 19th 2024
+# version:      1.07
 # bash_version: 4.4.12(1)-release
 # requires:     md5sum (tested with version 8.26),
 #               bc (tested with version 1.06.95),
