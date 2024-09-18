@@ -1,0 +1,43 @@
+name: S3 Ninja and OSSPerf Workflow
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  schedule:
+    - cron: '15 18 * * *'
+  workflow_dispatch:
+
+jobs:
+  run-workflow:
+    runs-on: self-hosted
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+
+    - name: Remove Existing S3ninja Container
+      run: |
+        if [ $(docker ps -aq -f name=s3ninja) ]; then
+         docker stop s3ninja
+         docker rm s3ninja
+        fi     
+        sleep 5
+    - name: Start S3 Ninja Server
+      run: |
+        docker pull scireum/s3-ninja
+        docker run -d --name s3ninja -p  9444:9000 scireum/s3-ninja:6.1
+        docker logs s3ninja     
+    - name: Wait for S3 Ninja Server to Start
+      run: |
+        sleep 5
+        
+        
+    - name: Run ossperf.sh
+      run: |
+        cd $GITHUB_WORKSPACE
+        chmod +x ossperf.sh
+        ./ossperf.sh -n 10 -s 5000 -u -p -o 2>&1
+#        ./ossperf.sh -n 10 -s 5000 -u -p   
