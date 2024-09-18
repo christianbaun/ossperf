@@ -7,8 +7,8 @@
 # contributors: Rosa Maria Spanou, Marius Wernicke, Makarov Alexandr, Brian_P, agracie, justinjrestivo
 # url:          https://github.com/christianbaun/ossperf
 # license:      GPLv3
-# date:         September 18th 2024
-# version:      1.1
+# date:         March 19th 2024
+# version:      1.07
 # bash_version: 4.4.12(1)-release
 # requires:     md5sum (tested with version 8.26),
 #               bc (tested with version 1.06.95),
@@ -88,7 +88,6 @@ function box_out()
 }
 
 SCRIPT=${0##*/}   # script name
-CHECK_THIRD_PARTY_APPS=0
 NUM_FILES=
 SIZE_FILES=
 BUCKETNAME_PARAMETER=0
@@ -155,8 +154,13 @@ while getopts "hn:s:b:uam:zgwrl:d:kpo" ARG ; do
   esac
 done
 
-# Only if the user wants to check the availabilty of the third party applications used by ossperf
-if [ "$CHECK_THIRD_PARTY_APPS" -eq 1 ] ; then
+# If neither using the Swift client, the Minio client (mc), the Azure client (az), the s4cmd client 
+# or the Google storage client (gsutil) has been specified via command line parameter...
+if [[ "$MINIO_CLIENT" -ne 1  && "$AZURE_CLI" -ne 1 && "$S4CMD_CLIENT" -ne 1 && "$AWS_CLI_API" -ne 1 && "$GOOGLE_API" -ne 1 && "$SWIFT_API" -ne 1 ]] ; then
+   # ... then we use the command line client s3cmd. This is the default client of ossperf
+   S3PERF_CLIENT=1
+   echo -e "${YELLOW}[INFO] ossperf will use the tool s3cmd because no other client tool has been specified via command line parameter.${NC}"
+fi
 
 # Check the operating system
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
