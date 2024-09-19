@@ -1418,7 +1418,7 @@ else
   # use the S3 API with mc
     # Erase files (objects) inside the bucket and the bucket itself sequentially
     # Up to now it is impossible to erase just the files inside a bucket
-    if mc rm -r --force "$MINIO_CLIENT_ALIAS"/$BUCKET  ; then
+    if mc rm --recursive --force "$MINIO_CLIENT_ALIAS"/$BUCKET  ; then
       echo -e "${GREEN}[OK] Files inside the bucket ${BUCKET} and the bucket itself have been erased sequentially with mc.${NC}"
     else
       echo -e "${RED}[ERROR] Unable to erase the files inside the bucket ${BUCKET} sequentially with mc.${NC}" && exit 1
