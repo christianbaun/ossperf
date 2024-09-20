@@ -10,8 +10,8 @@ jobs:
     runs-on: self-hosted
 
     env:
-      MIN_USER: minioadmin1
-      MIN_PASS: minioadminsecret
+      MIN_USER: ${{ secrets.MINIO_USER }}
+      MIN_PASS: ${{ secrets.MINIO_PASS }}
 
     steps:
     - name: Checkout repository
