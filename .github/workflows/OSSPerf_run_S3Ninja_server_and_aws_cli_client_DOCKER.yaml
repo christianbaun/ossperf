@@ -1,4 +1,4 @@
-name: S3 Ninja and OSSPerf Workflow
+name: OSSperf with S3Ninja server and aws cli client
 
 on:
   push:
