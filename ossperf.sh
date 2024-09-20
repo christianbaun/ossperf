@@ -7,14 +7,14 @@
 # contributors: Rosa Maria Spanou, Marius Wernicke, Makarov Alexandr, Brian_P, agracie, justinjrestivo
 # url:          https://github.com/christianbaun/ossperf
 # license:      GPLv3
-# date:         September 19th 2024
-# version:      1.09
+# date:         September 20th 2024
+# version:      1.1
 # bash_version: 4.4.12(1)-release
 # requires:     md5sum (tested with version 8.26),
 #               bc (tested with version 1.06.95),
 #               s3cmd (tested with versions 1.5.0, 1.6.1 and 2.0.2),
 #               parallel (tested with version 20161222)
-# optional      swift -- Python client for the Swift API (tested with v2.3.1),
+# optional      swift -- Python client for the Swift API (tested with v2.3.1 and 4.1.0),
 #               mc -- Minio Client for the S3 API (tested with RELEASE.2020-02-05T20-07-22Z)
 #               az -- Python client for the Azure CLI (tested with v2.0),
 #               gsutil -- Python client for the Google API (tested with v4.27 and 4.38)
@@ -289,7 +289,7 @@ if [ "$SWIFT_API" -eq 1 ] ; then
     exit 1
   else
     echo -e "${YELLOW}[INFO] The swift client has been found on this system.${NC}"
-    # !!! Missing: Print out the version information of the swift client !!!
+    swift --version
   fi
 
   # ... the script needs to check, if the environment variable ST_AUTH is set
