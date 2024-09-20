@@ -28,15 +28,15 @@ jobs:
       run: |
         docker run -d --name minio \
           -p 9000:9000 \
-          -e MINIO_ROOT_USER=$MIN_USER \
-          -e MINIO_ROOT_PASSWORD=$MIN_PASS \
+          -e MINIO_ROOT_USER=${{ secrets.MINIO_USER }} \
+          -e MINIO_ROOT_PASSWORD=${{ secrets.MINIO_PASS }} \
           minio/minio server /data
     - name: Wait for Minio Server to Start
       run: | 
         sleep 5  
     - name: Configure MinIO client
       run: | 
-        mc alias set myminio http://localhost:9000 $MIN_USER $MIN_PASS
+        mc alias set myminio http://localhost:9000 ${{ secrets.MINIO_USER }} ${{ secrets.MINIO_PASS }}
         mc alias list
     - name: Run ossperf.sh
       run: |
