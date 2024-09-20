@@ -34,7 +34,7 @@ jobs:
         MIN_USER: ${{ secrets.MINIO_USER }}
         MIN_PASS: ${{ secrets.MINIO_PASS }}
       run: | 
-        mc config host add myminio http://localhost:9000 ${MIN_USER} ${MIN_PASS}
+        mc config host add myminio http://localhost:9000 "${MIN_USER}" "${MIN_PASS}"
     - name: Run ossperf.sh
       run: |
         cd $GITHUB_WORKSPACE 
