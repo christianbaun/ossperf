@@ -39,7 +39,7 @@ jobs:
             break;
           fi
           echo "Waiting for MinIO to start...";
-          sleep 5;
+          sleep 2;
         done
     - name: Configure MinIO client
       run: | 
