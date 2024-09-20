@@ -9,7 +9,6 @@ jobs:
   run-workflow:
     runs-on: self-hosted
     steps:
-    - shell: bash
     - name: Checkout repository
       uses: actions/checkout@v3
     
@@ -30,11 +29,8 @@ jobs:
       run: | 
         sleep 5  
     - name: Create or update MinIO client (mc) config
-      env:
-        MIN_USER: ${{ secrets.MINIO_USER }}
-        MIN_PASS: ${{ secrets.MINIO_PASS }}
       run: | 
-        mc config host add myminio http://localhost:9000 "${MIN_USER}" "${MIN_PASS}"
+        mc config host add myminio http://localhost:9000 minioadmin minioadmin
     - name: Run ossperf.sh
       run: |
         cd $GITHUB_WORKSPACE 
