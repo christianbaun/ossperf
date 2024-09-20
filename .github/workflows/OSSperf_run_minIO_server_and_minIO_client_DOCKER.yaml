@@ -28,8 +28,8 @@ jobs:
       run: |
         docker run -d --name minio \
           -p 9000:9000 \
-          -e MINIO_ROOT_USER=${{ vars.MINIO_USER }} \
-          -e MINIO_ROOT_PASSWORD=${{ vars.MINIO_PASS }} \
+          -e MINIO_ROOT_USER=$MIN_USER \
+          -e MINIO_ROOT_PASSWORD=$MIN_PASS \
           minio/minio server /data
     - name: Wait for Minio Server to Start
       run: |
