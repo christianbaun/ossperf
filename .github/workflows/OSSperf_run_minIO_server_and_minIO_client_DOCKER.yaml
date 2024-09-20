@@ -41,11 +41,6 @@ jobs:
           echo "Waiting for MinIO to start...";
           sleep 5;
         done
-    - name: Install MinIO client (mc)
-      run: |
-        wget https://dl.min.io/client/mc/release/linux-amd64/mc
-        chmod +x mc
-        sudo mv mc /usr/local/bin/
     - name: Configure MinIO client
       run: | 
         mc alias set myminio http://localhost:9000 $MIN_USER $MIN_PASS
