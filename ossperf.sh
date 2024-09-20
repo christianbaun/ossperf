@@ -7,8 +7,8 @@
 # contributors: Rosa Maria Spanou, Marius Wernicke, Makarov Alexandr, Brian_P, agracie, justinjrestivo
 # url:          https://github.com/christianbaun/ossperf
 # license:      GPLv3
-# date:         September 18th 2024
-# version:      1.08
+# date:         September 19th 2024
+# version:      1.09
 # bash_version: 4.4.12(1)-release
 # requires:     md5sum (tested with version 8.26),
 #               bc (tested with version 1.06.95),
@@ -1502,6 +1502,7 @@ TIME_ERASE_OBJECTS_END=$(date +%s.%N)
 # Otherwise the "scale" is just ignored
 # The sed command ensures that results < 1 have a leading 0 before the "."
 TIME_ERASE_OBJECTS=$(echo "scale=3 ; (${TIME_ERASE_OBJECTS_END} - ${TIME_ERASE_OBJECTS_START})/1" | bc | sed 's/^\./0./')
+
 
 # Start of the 6th time measurement
 TIME_ERASE_BUCKET_START=$(date +%s.%N)
