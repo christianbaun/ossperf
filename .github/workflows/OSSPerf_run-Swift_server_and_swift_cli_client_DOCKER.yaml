@@ -1,0 +1,46 @@
+name: OSSperf with OpenStack Swift server and swift cli client
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  run-workflow:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Remove Existing Swift Container
+        run: |
+          if [ $(docker ps -aq -f name=swift) ]; then
+            docker stop swift
+            docker rm swift
+          fi
+      - name: Start OpenStack Swift Server
+        run: |
+          docker pull openstackswift/saio
+          docker run -d --name swift -p 8080:8080 openstackswift/saio
+      - name: Wait for Swift Server to Start
+        run: sleep 5  
+
+      - name: Configure OpenStack Swift Client
+        run: |
+          export ST_AUTH=http://localhost:8080/auth/v1.0
+          export ST_USER=test:tester
+          export ST_KEY=testing
+          echo "ST_AUTH=http://localhost:8080/auth/v1.0" >> $GITHUB_ENV
+          echo "ST_USER=test:tester" >> $GITHUB_ENV
+          echo "ST_KEY=testing" >> $GITHUB_ENV
+      - name: Run ossperf.sh
+        env:
+          ST_AUTH: ${{ env.ST_AUTH }}
+          ST_USER: ${{ env.ST_USER }}
+          ST_KEY: ${{ env.ST_KEY }}
+        run: |
+          cd $GITHUB_WORKSPACE
+          chmod +x ossperf.sh
+          ./ossperf.sh -n 5 -s 1048576 -b ossperf-testbucket -d http://localhost:8080 -u -a swift
