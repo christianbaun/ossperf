@@ -9,6 +9,7 @@ jobs:
   run-workflow:
     runs-on: self-hosted
     steps:
+    - shell: bash
     - name: Checkout repository
       uses: actions/checkout@v3
     
