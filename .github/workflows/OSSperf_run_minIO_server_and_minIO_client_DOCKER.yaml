@@ -36,7 +36,7 @@ jobs:
         sleep 5  
     - name: Configure MinIO client
       run: | 
-        mc config host add myminio http://localhost:9000 $MIN_USER $MIN_PASS
+        mc config host add myminio http://localhost:9000 "$MIN_USER" "$(MIN_PASS)"
         mc alias list
     - name: Run ossperf.sh
       run: |
