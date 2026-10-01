@@ -66,6 +66,32 @@ These software packages are optional:
 - [gsutil](https://github.com/GoogleCloudPlatform/gsutil) -- Python client for the Google Cloud Storage as replacement for s3cmd (tested with version 4.27 and 4.38)
 - [aws](https://github.com/aws/aws-cli) -- AWS CLI client for the S3 API (tested with version 1.15.6)
 
+## Development checks
+
+On Linux, install Bash (4.4 or later), Git, ShellCheck, and GNU coreutils,
+then run the same checks as GitHub Actions from the repository:
+
+```bash
+bash scripts/check.sh
+```
+
+This checks Bash syntax and runs ShellCheck for every tracked `*.sh` file
+(including new, non-ignored shell scripts before staging), then tests
+`ossperf.sh -n not-a-number -s 4096`. Any failed check returns a nonzero
+exit code. ShellCheck runs without user configuration or disabled findings.
+
+The argument test uses a temporary working directory, an empty environment,
+isolated home/config directories, and logging test doubles for storage clients.
+It verifies a nonzero exit code, an understandable argument error, and no
+storage operations. Required tools are supplied independently of installed
+storage clients; network probes and delays are also replaced. No storage
+service, credentials, or benchmark is needed.
+
+The `OSSperf shell checks` workflow runs on pull requests targeting `master`
+and pushes to `master`, on a GitHub-hosted Linux runner with read-only repository
+permissions and a five-minute timeout. The existing self-hosted Docker benchmark
+workflows are separate and unchanged.
+
 ## Examples
 
 This command creates five files of size 1 MB each and uses them to test the performance and data integrity of the storage service. The new bucket used has the name ossperf-testbucket, and the uploads and downloads are carried out in parallel. The [s3cmd](https://github.com/s3tools/s3cmd) command line tool is used.

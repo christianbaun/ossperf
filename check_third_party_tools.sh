@@ -27,8 +27,6 @@ RED='\033[0;31m'          # Red color
 NC='\033[0m'              # No color
 GREEN='\033[0;32m'        # Green color
 YELLOW='\033[0;33m'       # Yellow color
-BLUE='\033[0;34m'         # Blue color
-WHITE='\033[0;37m'        # White color
 
 
 # Check the operating system
